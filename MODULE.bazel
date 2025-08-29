@@ -36,6 +36,7 @@ maven.install(
         "com.github.mizosoft.methanol:methanol:1.8.3",
         "net.neoforged:srgutils:1.0.10",
         "io.codechicken:DiffPatch:2.0.0.36:all",
+        "net.neoforged.jst:jst-cli-bundle:1.0.74",
 
         # mod dependencies
         "net.fabricmc:fabric-loader:0.16.14",
@@ -131,5 +132,19 @@ neoform.pin(
 )
 use_repo(neoform, neoform = "neoform_1_21_8_20250717_133445")
 use_repo(neoform, "neoform_pin")
+
+neoforge = use_extension("//repo:neoforge.bzl", "neoforge")
+neoforge.version(
+    version = "21.8.36",
+    userdev_sha256 = "051b0561fe0725fb953336c363f82540c80a2f4e86cdd17023b7ecc0842a6012",
+    sources_sha256 = "4abf052591e38c1c84504f2ae4b741387a303deb04b459f4fa2fe4ae17bf1764",
+    universal_sha256 = "758961d98cab1104ad281d5d0574e06a154e8ce94b19c71c2b460c4dc89eb405",
+    joined_patched_sources = "@neoform//tasks/joined_patch",
+)
+neoforge.pin(
+    pin_file = "//:neoforge_pin.txt",
+)
+use_repo(neoforge, neoforge = "neoforge_21_8_36")
+use_repo(neoforge, "neoforge_pin")
 
 register_toolchains("//:kotlin_toolchain")

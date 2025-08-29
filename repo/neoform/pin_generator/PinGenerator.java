@@ -21,7 +21,7 @@ public class PinGenerator {
     private static final String[] URLS = new String[]{ /*INJECT HERE*/};
 
     public static void main(String[] args) throws Exception {
-        var outputPath = Path.of("neoform_pin.txt").toAbsolutePath();
+        var outputPath = Path.of("/*OUTPUT NAME*/.txt").toAbsolutePath();
         try (var client = HttpClient.newHttpClient();
              var output = Files.newBufferedWriter(outputPath)) {
             var semaphore = new Semaphore(4);

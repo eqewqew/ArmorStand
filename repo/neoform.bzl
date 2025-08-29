@@ -2,19 +2,10 @@
 
 load("@//private:maven_coordinate.bzl", _convert_maven_coordinate = "convert_maven_coordinate", _convert_maven_coordinate_to_repo = "convert_maven_coordinate_to_repo", _convert_maven_coordinate_to_url = "convert_maven_coordinate_to_url")
 load("@//private:snake_case.bzl", _camel_case_to_snake_case = "camel_case_to_snake_case")
+load("@//private:pin_file.bzl", _parse_pin_file = "parse_pin_file")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_jar")
 
 _neoform_repository_url = "https://maven.neoforged.net/releases"
-
-def _parse_pin_file(content):
-    lines = content.split("\n")
-    hashes = {}
-    for line in lines:
-        space_index = line.find(" ")
-        url = line[:space_index]
-        hash = line[space_index + 1:]
-        hashes[url] = hash
-    return hashes
 
 def _neoform_repo_impl(rctx):
     pin_content = {}
@@ -133,7 +124,10 @@ def _neoform_repo_impl(rctx):
             "\n".join(function_build),
         )
 
+        jar_output = function_name != "mergeMappings"
+
         args = function.get("args", [])
+        arg_names = []
         arg_entries = []
         for arg in args:
             type = None
@@ -155,17 +149,26 @@ def _neoform_repo_impl(rctx):
                 "name": name,
                 "type": type,
             })
+            arg_names.append(name)
 
         rule_output_extension = ".jar" if function_name != "merge" else ".tsrg"
         rule_impl_name = "_%s_impl" % function_name
-        rule_impl = [
+        rule_impl = []
+        if jar_output:
+            rule_impl.append('load("@//repo/neoform:java_source_info.bzl", "JavaSourceInfo")')
+        rule_impl += [
             "def %s(ctx):" % rule_impl_name,
             '    output_file = ctx.actions.declare_file("_neoform_%s/" + ctx.label.name + "%s")' % (function_name, rule_output_extension),
             "    args = ctx.actions.args()",
             "",
             "    action_inputs = []",
-            "    # Add function arguments",
         ]
+        if jar_output:
+            rule_impl.append("    input_deps = []")
+            rule_impl.append("    input_libraries = []")
+            if "input" in arg_names:
+                rule_impl.append("    if JavaSourceInfo in ctx.attr.input:")
+                rule_impl.append("        input_deps.append(ctx.attr.input[JavaSourceInfo])")
         for entry in arg_entries:
             name = entry["name"]
             if entry["type"] == "plain":
@@ -188,6 +191,8 @@ def _neoform_repo_impl(rctx):
                 rule_impl.append("    for attr in ctx.attr.%s:" % name)
                 rule_impl.append("        %s.append(attr[JavaInfo].compile_jars)" % input_depsets_name)
                 rule_impl.append("    %s = depset(transitive = %s).to_list()" % (input_files_name, input_depsets_name))
+                if jar_output:
+                    rule_impl.append("    input_libraries += %s" % input_files_name)
                 rule_impl.append("    %s = []" % input_paths_name)
                 rule_impl.append("    for file in %s:" % input_files_name)
                 rule_impl.append('        %s.append("-e=" + file.path)' % input_paths_name)
@@ -209,7 +214,15 @@ def _neoform_repo_impl(rctx):
         rule_impl.append("        arguments = [args],")
         rule_impl.append("    )")
         rule_impl.append("    ")
-        rule_impl.append("    return [DefaultInfo(files = depset([output_file]))]")
+        rule_impl.append("    return [")
+        rule_impl.append('        DefaultInfo(files = depset([output_file])),')
+        if jar_output:
+            rule_impl.append('        JavaSourceInfo(')
+            rule_impl.append('            source_jar = output_file,')
+            rule_impl.append('            deps = input_deps,')
+            rule_impl.append('            libraries = input_libraries,')
+            rule_impl.append('        ),')
+        rule_impl.append("    ]")
         rule_impl = "\n".join(rule_impl)
 
         rule_def = [
@@ -222,6 +235,8 @@ def _neoform_repo_impl(rctx):
             if entry["type"] == "file":
                 rule_def.append('        "%s": attr.label(' % name)
                 rule_def.append("            mandatory = True,")
+                if jar_output:
+                    rule_def.append("            providers = [[], [JavaSourceInfo]],")
                 rule_def.append("            allow_single_file = True,")
                 rule_def.append("        ),")
             elif entry["type"] == "string":
@@ -257,7 +272,7 @@ def _neoform_repo_impl(rctx):
         steps = config_data["steps"][side_name]
         for step in steps:
             type = step["type"]
-            if type.startswith("type") or type == "listLibraries":
+            if type.startswith("download") or type == "listLibraries":
                 continue
 
             name = step.get("name", type)
@@ -280,7 +295,7 @@ def _neoform_repo_impl(rctx):
             elif type == "inject":
                 task_def.append('    deps = ["//:injects"],')
             elif type == "patch":
-                task_def.append('    prefix = "%s/",' % config_data["data"]["patches"][side_name])
+                task_def.append('    prefix = "%s",' % config_data["data"]["patches"][side_name])
                 task_def.append('    patches = "//:neoform",')
             elif type == "split":
                 if name == "stripClient":
@@ -316,12 +331,14 @@ def _neoform_repo_impl(rctx):
                         elif output_task == "downloadServerMappings":
                             task_def.append('    %s = "%s",' % (item_key, rctx.attr.server_mapping))
                         elif output_task == "listLibraries":
+                            sided_libraries = ['"@%s//jar"' % _convert_maven_coordinate_to_repo("neoform", library) for library in config_data["libraries"][side_name]]
+                            sided_libraries = ", ".join(sided_libraries)
                             if side_name == "client":
-                                task_def.append('    %s = ["%s"],' % (item_key, rctx.attr.client_libraries))
+                                task_def.append('    %s = ["%s", %s],' % (item_key, rctx.attr.client_libraries, sided_libraries))
                             elif side_name == "server":
-                                task_def.append('    %s = ["%s"],' % (item_key, rctx.attr.server_libraries))
+                                task_def.append('    %s = ["%s", %s],' % (item_key, rctx.attr.server_libraries, sided_libraries))
                             elif side_name == "joined":
-                                task_def.append('    %s = ["%s", "%s"],' % (item_key, rctx.attr.client_libraries, rctx.attr.server_libraries))
+                                task_def.append('    %s = ["%s", "%s", %s],' % (item_key, rctx.attr.client_libraries, rctx.attr.server_libraries, sided_libraries))
                             else:
                                 fail("Unsupported side when listing libraries: %s" % side_name)
                         else:
@@ -391,6 +408,7 @@ def _neoform_pin_impl(rctx):
         url_lines.append('"%s"' % _convert_maven_coordinate_to_url(_neoform_repository_url, coordinate))
     rctx.template("PinGenerator.java", rctx.attr._pinner_source, {
         "/*INJECT HERE*/": ", ".join(url_lines),
+        "/*OUTPUT NAME*/": "neoform_pin"
     })
 
     build_bazel_contents = [
@@ -510,7 +528,6 @@ def _neoform_impl(mctx):
     versions = versions.values()
 
     libraries = []
-
     def append_library(coordinate):
         if coordinate not in libraries:
             libraries.append(coordinate)
@@ -536,9 +553,9 @@ def _neoform_impl(mctx):
             for library in config_data["libraries"][libraries_side]:
                 append_library(library)
 
-        repo_name = _convert_maven_coordinate(version["version"])
+        repo_name = _convert_maven_coordinate_to_repo("neoform", version_name)
         _neoform_repo(
-            name = "neoform_%s" % repo_name,
+            name = repo_name,
             version = version_name,
             sha256 = version_sha256,
             client_jar = version["client_jar"],

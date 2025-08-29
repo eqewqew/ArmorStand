@@ -1,5 +1,11 @@
+load("@//repo/neoform:java_source_info.bzl", "JavaSourceInfo")
+
 def _inject_zip_content_impl(ctx):
     output_jar = ctx.actions.declare_file(ctx.label.name + ".jar")
+
+    input_deps = []
+    if JavaSourceInfo in ctx.attr.input:
+        input_deps.append(ctx.attr.input[JavaSourceInfo])
 
     args = ctx.actions.args()
     args.add(ctx.file.input.path)
@@ -14,14 +20,21 @@ def _inject_zip_content_impl(ctx):
         outputs = [output_jar],
     )
 
-    return [DefaultInfo(files = depset([output_jar]))]
+    return [
+        DefaultInfo(files = depset([output_jar])),
+        JavaSourceInfo(
+            source_jar = output_jar,
+            deps = input_deps,
+        ),
+    ]
 
 inject_zip_content = rule(
     implementation = _inject_zip_content_impl,
     attrs = {
         "input": attr.label(
             doc = "The zip file to inject into",
-            allow_single_file = [".jar"],
+            allow_single_file = [".zip", ".jar", ".srcjar"],
+            providers = [[], [JavaSourceInfo]],
             mandatory = True,
         ),
         "deps": attr.label_list(

@@ -1,4 +1,5 @@
 load("@rules_java//java:defs.bzl", "JavaInfo")
+load("@//repo/neoform:java_source_info.bzl", "JavaSourceInfo")
 
 PatchZipInfo = provider(
     doc = "Contains both the patched and rejected JARs",
@@ -11,6 +12,10 @@ PatchZipInfo = provider(
 def _patch_zip_content_impl(ctx):
     patched_jar = ctx.actions.declare_file(ctx.label.name + "_patched.jar")
     rejects_jar = ctx.actions.declare_file(ctx.label.name + "_rejects.jar")
+
+    input_deps = []
+    if JavaSourceInfo in ctx.attr.input:
+        input_deps.append(ctx.attr.input[JavaSourceInfo])
 
     args = ctx.actions.args()
     args.add(ctx.file.input.path, ctx.file.patches.path)
@@ -40,6 +45,10 @@ def _patch_zip_content_impl(ctx):
         DefaultInfo(
             files = depset([patched_jar]),
         ),
+        JavaSourceInfo(
+            source_jar = patched_jar,
+            deps = input_deps,
+        ),
     ]
 
 patch_zip_content = rule(
@@ -47,6 +56,7 @@ patch_zip_content = rule(
     attrs = {
         "input": attr.label(
             allow_single_file = [".jar"],
+            providers = [[], [JavaSourceInfo]],
             mandatory = True,
             doc = "Input JAR file to patch",
         ),
