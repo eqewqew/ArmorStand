@@ -34,6 +34,8 @@ maven.install(
         "de.swiesend:secret-service:2.0.1-alpha",
         "ch.qos.logback:logback-classic:1.5.18",
         "com.github.mizosoft.methanol:methanol:1.8.3",
+        "net.neoforged:srgutils:1.0.10",
+        "io.codechicken:DiffPatch:2.0.0.36:all",
 
         # mod dependencies
         "net.fabricmc:fabric-loader:0.16.14",
@@ -66,6 +68,7 @@ maven.install(
     repositories = [
         "https://repo1.maven.org/maven2",
         "https://maven.fabricmc.net/",
+        "https://maven.neoforged.net/releases",
         "https://maven.terraformersmc.com/",
         "https://maven.nucleoid.xyz/",
         "https://masa.dy.fi/maven",
@@ -101,15 +104,32 @@ minecraft.minecraft_jar(
     version = game_version,
     type = "client",
     assets = True,
-    mapping = False,
+    mapping = True,
 )
 minecraft.minecraft_jar(
     version = game_version,
     type = "server",
-    mapping = False,
+    mapping = True,
 )
 minecraft.exclude_library(names = ["org.ow2.asm:asm:9.6"])
 use_repo(minecraft, "minecraft")
 use_repo(minecraft, "minecraft_assets")
+
+neoform = use_extension("//repo:neoform.bzl", "neoform")
+neoform.version(
+    version = "1.21.8-20250717.133445",
+    sha256 = "d67401bd0769ee045128fb84142fb660fe49db8ea86538d4dc308c25cd0cdbca",
+    client_jar = "@minecraft//:%s_client" % game_version,
+    server_jar = "@minecraft//:%s_server" % game_version,
+    client_mapping = "@minecraft//:%s_client_mapping" % game_version,
+    server_mapping = "@minecraft//:%s_server_mapping" % game_version,
+    client_libraries = "@minecraft//:%s_client_libraries" % game_version,
+    server_libraries = "@minecraft//:%s_server_libraries" % game_version,
+)
+neoform.pin(
+    pin_file = "//:neoform_pin.txt",
+)
+use_repo(neoform, neoform = "neoform_1_21_8_20250717_133445")
+use_repo(neoform, "neoform_pin")
 
 register_toolchains("//:kotlin_toolchain")
