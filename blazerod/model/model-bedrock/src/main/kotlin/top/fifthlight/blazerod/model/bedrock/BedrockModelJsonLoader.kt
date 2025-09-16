@@ -130,8 +130,8 @@ internal class BedrockModelJsonLoader(
                                                 when (key) {
                                                     "name" -> boneName = nextString()
                                                     "parent" -> parentName = nextString()
-                                                    "pivot" -> vec3(bonePivot)
-                                                    "rotation" -> vec3(boneRotation)
+                                                    "pivot" -> vec3(bonePivot).apply { x = -x }
+                                                    "rotation" -> vec3(boneRotation).apply { x = -x; y = -y }
                                                     "mirror" -> boneMirror = nextBoolean()
                                                     "inflate" -> boneInflate = nextDouble().toFloat()
                                                     "cubes" -> array {
@@ -198,10 +198,10 @@ internal class BedrockModelJsonLoader(
                         val boneRotation = bone.rotation
                         val boneTransformMatrix = Matrix4f()
                             .translation(bonePivot)
-                            .rotateXYZ(
-                                -boneRotation.x().toRadian(),
-                                -boneRotation.y().toRadian(),
-                                -boneRotation.z().toRadian(),
+                            .rotateZYX(
+                                boneRotation.z().toRadian(),
+                                boneRotation.y().toRadian(),
+                                boneRotation.x().toRadian(),
                             )
                             .translate(bonePivotNeg)
                         ParseContext.BoneNode(
@@ -221,10 +221,10 @@ internal class BedrockModelJsonLoader(
                         val boneTransformMatrix = Matrix4f()
                             .set(parentNode.transformMatrix)
                             .translate(bonePivot)
-                            .rotateXYZ(
-                                -boneRotation.x().toRadian(),
-                                -boneRotation.y().toRadian(),
-                                -boneRotation.z().toRadian(),
+                            .rotateZYX(
+                                boneRotation.z().toRadian(),
+                                boneRotation.y().toRadian(),
+                                boneRotation.x().toRadian(),
                             )
                             .translate(bonePivotNeg)
 
@@ -417,10 +417,10 @@ internal class BedrockModelJsonLoader(
 
                                                         obj { bonePropertyKey ->
                                                             when (bonePropertyKey) {
-                                                                "origin" -> vec3(cubeOrigin)
+                                                                "origin" -> vec3(cubeOrigin).apply { x = -x }
                                                                 "size" -> vec3(cubeSize)
-                                                                "pivot" -> vec3(cubePivot)
-                                                                "rotation" -> vec3(cubeRotation)
+                                                                "pivot" -> vec3(cubePivot).apply { x = -x }
+                                                                "rotation" -> vec3(cubeRotation).apply { x = -x; y = -y }
                                                                 "inflate" -> cubeInflate = nextDouble().toFloat()
                                                                 "mirror" -> cubeMirror = nextBoolean()
                                                                 "uv" -> {
@@ -466,6 +466,8 @@ internal class BedrockModelJsonLoader(
                                                                 else -> skipValue()
                                                             }
                                                         }
+
+                                                        cubeOrigin.x -= cubeSize.x
 
                                                         // Flatten box UVs to face UVs
                                                         if (isBoxUv) {
@@ -546,10 +548,10 @@ internal class BedrockModelJsonLoader(
                                                         cubeTransformMatrix
                                                             .set(boneTransformMatrix)
                                                             .translate(cubePivot)
-                                                            .rotateXYZ(
-                                                                -cubeRotation.x.toRadian(),
-                                                                -cubeRotation.y.toRadian(),
-                                                                -cubeRotation.z.toRadian(),
+                                                            .rotateZYX(
+                                                                cubeRotation.z.toRadian(),
+                                                                cubeRotation.y.toRadian(),
+                                                                cubeRotation.x.toRadian(),
                                                             )
                                                             .translate(cubePivotNeg)
                                                             .translate(cubeOrigin)

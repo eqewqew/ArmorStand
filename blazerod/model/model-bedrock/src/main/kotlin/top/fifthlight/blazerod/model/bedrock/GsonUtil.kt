@@ -26,17 +26,17 @@ inline fun JsonReader.array(onEntry: JsonReader.() -> Unit) {
     endArray()
 }
 
-inline fun JsonReader.vec3(vector3f: Vector3f) {
+inline fun JsonReader.vec3(vector3f: Vector3f) = vector3f.apply {
     beginArray()
-    vector3f.x = nextDouble().toFloat()
-    vector3f.y = nextDouble().toFloat()
-    vector3f.z = nextDouble().toFloat()
+    x = nextDouble().toFloat()
+    y = nextDouble().toFloat()
+    z = nextDouble().toFloat()
     endArray()
 }
 
-inline fun JsonReader.vec2(vector2f: Vector2f) {
+inline fun JsonReader.vec2(vector2f: Vector2f) = vector2f.apply {
     beginArray()
-    vector2f.x = nextDouble().toFloat()
-    vector2f.y = nextDouble().toFloat()
+    x = nextDouble().toFloat()
+    y = nextDouble().toFloat()
     endArray()
 }
