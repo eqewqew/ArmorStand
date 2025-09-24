@@ -8,7 +8,7 @@ import top.fifthlight.blazerod.model.util.MutableFloat
 data class SingleFrameAnimationChannel<T : Any, D>(
     override val type: AnimationChannel.Type<T, D>,
     override val typeData: D,
-    val setValue: (T) -> Unit,
+    val setValue: (context: AnimationContext, state: AnimationState, result: T) -> Unit,
 ) : AnimationChannel<T, D> {
     val duration: Float
         get() = 0f
@@ -19,9 +19,7 @@ data class SingleFrameAnimationChannel<T : Any, D>(
         context: AnimationContext,
         state: AnimationState,
         result: T,
-    ) {
-        setValue(result)
-    }
+    ) = setValue(context, state, result)
 }
 
 @JvmName("Vector3fSingleFrameAnimationChannel")
@@ -29,18 +27,24 @@ fun <D> SingleFrameAnimationChannel(
     type: AnimationChannel.Type<Vector3f, D>,
     typeData: D,
     value: Vector3fc,
-) = SingleFrameAnimationChannel(type, typeData) { it.set(value) }
+) = SingleFrameAnimationChannel(type, typeData) { _, _, result ->
+    result.set(value)
+}
 
 @JvmName("QuaternionfSingleFrameAnimationChannel")
 fun <D> SingleFrameAnimationChannel(
     type: AnimationChannel.Type<Quaternionf, D>,
     typeData: D,
     value: Quaternionf,
-) = SingleFrameAnimationChannel(type, typeData) { it.set(value) }
+) = SingleFrameAnimationChannel(type, typeData) { _, _, result ->
+    result.set(value)
+}
 
 @JvmName("FloatSingleFrameAnimationChannel")
 fun <D> SingleFrameAnimationChannel(
     type: AnimationChannel.Type<MutableFloat, D>,
     typeData: D,
     value: Float,
-) = SingleFrameAnimationChannel(type, typeData) { it.value = value }
+) = SingleFrameAnimationChannel(type, typeData) { _, _, result ->
+    result.value = value
+}

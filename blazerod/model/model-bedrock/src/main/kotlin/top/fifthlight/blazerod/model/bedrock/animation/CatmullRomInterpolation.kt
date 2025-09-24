@@ -29,6 +29,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
     private val vector3fP0List = listOf(vector3fP0)
     private val vector3fP3List = listOf(vector3fP3)
     override fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -41,8 +43,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
 
         val i0 = (startFrame - 1).coerceAtLeast(0)
         val i3 = (endFrame + 1).coerceIn(0, keyFrameData.frames - 1)
-        keyframeData.get(i0, vector3fP0List, false)
-        keyframeData.get(i3, vector3fP3List, false)
+        keyframeData.get(context, state, i0, vector3fP0List, false)
+        keyframeData.get(context, state, i3, vector3fP3List, false)
 
         val p0 = vector3fP0
         val p1 = startValue[0]
@@ -72,6 +74,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
     private val quaternionfP3List = listOf(quaternionfP3)
     private val tempQuaternion = Quaternionf()
     override fun interpolateQuaternionf(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -84,8 +88,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
 
         val i0 = (startFrame - 1).coerceAtLeast(0)
         val i3 = (endFrame + 1).coerceIn(0, keyFrameData.frames - 1)
-        keyframeData.get(i0, quaternionfP0List, false)
-        keyframeData.get(i3, quaternionfP3List, false)
+        keyframeData.get(context, state, i0, quaternionfP0List, false)
+        keyframeData.get(context, state, i3, quaternionfP3List, false)
 
         val p0 = quaternionfP0
         val p1 = startValue[0]
@@ -118,6 +122,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
     private val floatP0List = listOf(floatP0)
     private val floatP3List = listOf(floatP3)
     override fun interpolateFloat(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -130,8 +136,8 @@ class CatmullRomInterpolation : AnimationInterpolation(1),
 
         val i0 = (startFrame - 1).coerceAtLeast(0)
         val i3 = (endFrame + 1).coerceIn(0, keyFrameData.frames - 1)
-        keyframeData.get(i0, floatP0List, false)
-        keyframeData.get(i3, floatP3List, false)
+        keyframeData.get(context, state, i0, floatP0List, false)
+        keyframeData.get(context, state, i3, floatP3List, false)
 
         val p0 = floatP0.value
         val p1 = startValue[0].value

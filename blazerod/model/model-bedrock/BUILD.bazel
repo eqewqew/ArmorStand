@@ -26,7 +26,7 @@ kt_jvm_library(
     visibility = ["//visibility:public"],
     deps = [
         "//blazerod/model/model-base",
-        "@maven//:team_unnamed_mocha",
+        "@mocha//:mocha",
         "//:kotlin_serialization",
         "@maven//:org_jetbrains_kotlinx_kotlinx_serialization_json",
         "@maven//:com_google_code_gson_gson",
@@ -38,7 +38,6 @@ merge_jij(
     input = ":model-bedrock",
     visibility = ["//visibility:public"],
     deps = {
-        "@maven//:team_unnamed_mocha": "team_unnamed_mocha:3.0.0",
-        "@maven//:org_javassist_javassist": "org_javassist_javassist:3.30.2-GA",
+        "@mocha//:mocha": "team_unnamed_mocha:3.0.1",
     },
 )

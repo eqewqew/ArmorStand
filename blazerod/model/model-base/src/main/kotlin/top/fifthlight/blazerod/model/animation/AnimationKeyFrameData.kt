@@ -11,7 +11,13 @@ import java.nio.ByteOrder
 interface AnimationKeyFrameData<T> {
     val frames: Int
     val elements: Int
-    fun get(index: Int, data: List<T>, post: Boolean)
+    fun get(
+        context: AnimationContext,
+        state: AnimationState,
+        index: Int,
+        data: List<T>,
+        post: Boolean,
+    )
 
     companion object
 }
@@ -34,7 +40,13 @@ class FloatListAnimationKeyFrameData<T>(
 
     override val frames = values.size / valueSize
 
-    override fun get(index: Int, data: List<T>, post: Boolean) {
+    override fun get(
+        context: AnimationContext,
+        state: AnimationState,
+        index: Int,
+        data: List<T>,
+        post: Boolean,
+    ) {
         val baseOffset = index * valueSize + if (splitPrePost && post) {
             elements * componentCount
         } else {
@@ -123,7 +135,13 @@ class AccessorAnimationKeyFrameData<T>(
             .order(ByteOrder.LITTLE_ENDIAN)
     }
 
-    override fun get(index: Int, data: List<T>, post: Boolean) {
+    override fun get(
+        context: AnimationContext,
+        state: AnimationState,
+        index: Int,
+        data: List<T>,
+        post: Boolean,
+    ) {
         var position = index * elementStride
         for (i in 0 until elements) {
             if (isZeroFilled) {
@@ -153,8 +171,14 @@ fun <T, R> AnimationKeyFrameData<T>.map(
 
         private val tempOriginalData = List(original.elements) { defaultValue() }
 
-        override fun get(index: Int, data: List<R>, post: Boolean) {
-            original.get(index, tempOriginalData, post)
+        override fun get(
+            context: AnimationContext,
+            state: AnimationState,
+            index: Int,
+            data: List<R>,
+            post: Boolean,
+        ) {
+            original.get(context, state, index, tempOriginalData, post)
 
             for (i in 0 until elements) {
                 transform(tempOriginalData[i], data[i])

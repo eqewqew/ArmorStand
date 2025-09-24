@@ -4,12 +4,9 @@ import net.minecraft.entity.Entity
 import net.minecraft.util.Identifier
 import net.minecraft.util.math.Direction
 import org.joml.Math.sqrt
-import org.joml.Vector3f
 import top.fifthlight.blazerod.model.animation.AnimationContext
 import top.fifthlight.blazerod.model.animation.AnimationContext.Property.*
-import top.fifthlight.blazerod.model.util.MutableBoolean
-import top.fifthlight.blazerod.model.util.MutableFloat
-import top.fifthlight.blazerod.model.util.MutableInt
+import top.fifthlight.blazerod.model.animation.AnimationContext.RenderingTargetType
 import top.fifthlight.blazerod.util.ObjectPool
 import top.fifthlight.blazerod.util.set
 import top.fifthlight.blazerod.util.sub
@@ -35,6 +32,7 @@ open class EntityAnimationContext protected constructor() : BaseAnimationContext
 
         @JvmStatic
         protected val propertyTypes = BaseAnimationContext.propertyTypes + setOf(
+            RenderTarget,
             EntityPosition,
             EntityPositionDelta,
             EntityHorizontalFacing,
@@ -43,6 +41,7 @@ open class EntityAnimationContext protected constructor() : BaseAnimationContext
             EntityHasRider,
             EntityIsRiding,
             EntityIsInWater,
+            EntityIsInWaterOrRain,
             EntityIsInFire,
             EntityIsOnGround,
         )
@@ -63,16 +62,13 @@ open class EntityAnimationContext protected constructor() : BaseAnimationContext
         POOL.release(this)
     }
 
-    protected val vector3fBuffer = Vector3f()
-    protected val intBuffer = MutableInt()
-    protected val floatBuffer = MutableFloat()
-    protected val booleanBuffer = MutableBoolean()
-
     @Suppress("UNCHECKED_CAST")
     override fun <T> getProperty(type: AnimationContext.Property<T>): T? = when (type) {
-        EntityPosition -> vector3fBuffer.set(entity.pos)
+        RenderTarget -> RenderingTargetType.ENTITY
 
-        EntityPositionDelta -> entity.pos.sub(entity.lastRenderPos, vector3fBuffer)
+        EntityPosition -> vector3dBuffer.set(entity.pos)
+
+        EntityPositionDelta -> entity.pos.sub(entity.lastRenderPos, vector3dBuffer)
 
         EntityHorizontalFacing -> when (entity.horizontalFacing) {
             Direction.NORTH -> 2
@@ -82,17 +78,19 @@ open class EntityAnimationContext protected constructor() : BaseAnimationContext
             Direction.UP, Direction.DOWN -> throw AssertionError("Invalid cardinal facing")
         }.let { intBuffer.apply { value = it } }
 
-        EntityGroundSpeed -> floatBuffer.apply {
-            value = sqrt(entity.movement.x * entity.movement.x + entity.movement.z * entity.movement.z).toFloat()
+        EntityGroundSpeed -> doubleBuffer.apply {
+            value = sqrt(entity.movement.x * entity.movement.x + entity.movement.z * entity.movement.z)
         }
 
-        EntityVerticalSpeed -> floatBuffer.apply { value = entity.movement.y.toFloat() }
+        EntityVerticalSpeed -> doubleBuffer.apply { value = entity.movement.y }
 
         EntityHasRider -> booleanBuffer.apply { value = entity.hasPassengers() }
 
         EntityIsRiding -> booleanBuffer.apply { value = entity.hasVehicle() }
 
         EntityIsInWater -> booleanBuffer.apply { value = entity.isTouchingWater }
+
+        EntityIsInWaterOrRain -> booleanBuffer.apply { value = entity.isTouchingWaterOrRain }
 
         EntityIsInFire -> booleanBuffer.apply { value = entity.isOnFire }
 

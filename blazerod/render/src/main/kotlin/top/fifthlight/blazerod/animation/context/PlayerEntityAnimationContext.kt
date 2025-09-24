@@ -6,6 +6,7 @@ import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.util.Identifier
 import top.fifthlight.blazerod.model.animation.AnimationContext
 import top.fifthlight.blazerod.model.animation.AnimationContext.Property.*
+import top.fifthlight.blazerod.model.animation.AnimationContext.RenderingTargetType
 import top.fifthlight.blazerod.util.ObjectPool
 
 open class PlayerEntityAnimationContext protected constructor() : LivingEntityAnimationContext(), AutoCloseable {
@@ -29,9 +30,11 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
 
         @JvmStatic
         protected val propertyTypes = EntityAnimationContext.propertyTypes + listOf(
+            RenderTarget,
             PlayerHeadXRotation,
             PlayerHeadYRotation,
             PlayerIsFirstPerson,
+            PlayerPersonView,
             PlayerIsSpectator,
             PlayerIsSneaking,
             PlayerIsSprinting,
@@ -41,10 +44,19 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
             PlayerIsEating,
             PlayerIsUsingItem,
             PlayerLevel,
-            PlayerIsJumping
+            PlayerIsJumping,
+            PlayerIsSleeping,
         )
             @JvmName("getPlayerEntityPropertyTypes")
             get
+    }
+
+    override fun close() {
+        if (released) {
+            return
+        }
+        released = true
+        POOL.release(this)
     }
 
     protected var realPlayerEntity: PlayerEntity? = null
@@ -57,6 +69,8 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
 
     @Suppress("UNCHECKED_CAST")
     override fun <T> getProperty(type: AnimationContext.Property<T>): T? = when (type) {
+        RenderTarget -> RenderingTargetType.PLAYER
+
         // FIXME
         PlayerHeadXRotation -> floatBuffer.apply { value = 0f }
 
@@ -66,6 +80,18 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
             val isSelf = entity == client.player
             val isFirstPerson = client.options.perspective == Perspective.FIRST_PERSON
             value = isSelf && isFirstPerson
+        }
+
+        PlayerPersonView -> intBuffer.apply {
+            val isSelf = entity == client.player
+            val perspective = client.options.perspective
+            value = when {
+                !isSelf -> 1
+                perspective == Perspective.FIRST_PERSON -> 0
+                perspective == Perspective.THIRD_PERSON_BACK -> 1
+                perspective == Perspective.THIRD_PERSON_FRONT -> 2
+                else -> 0
+            }
         }
 
         PlayerIsSpectator -> booleanBuffer.apply { value = entity.isSpectator }
@@ -92,6 +118,8 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
         PlayerLevel -> intBuffer.apply { value = entity.experienceLevel }
 
         PlayerIsJumping -> booleanBuffer.apply { value = entity.isJumping }
+
+        PlayerIsSleeping -> booleanBuffer.apply { value = entity.isSleeping }
 
         else -> super.getProperty(type)
     } as T?

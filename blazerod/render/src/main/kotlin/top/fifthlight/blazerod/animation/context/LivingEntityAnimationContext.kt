@@ -38,6 +38,14 @@ open class LivingEntityAnimationContext protected constructor() : EntityAnimatio
             get
     }
 
+    override fun close() {
+        if (released) {
+            return
+        }
+        released = true
+        POOL.release(this)
+    }
+
     protected var realLivingEntity: LivingEntity? = null
         set(value) {
             realEntity = value

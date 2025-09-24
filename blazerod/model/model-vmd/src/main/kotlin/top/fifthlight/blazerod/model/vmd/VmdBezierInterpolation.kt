@@ -1,9 +1,7 @@
 package top.fifthlight.blazerod.model.vmd
 
 import org.joml.*
-import top.fifthlight.blazerod.model.animation.AnimationChannel
-import top.fifthlight.blazerod.model.animation.AnimationChannelComponent
-import top.fifthlight.blazerod.model.animation.AnimationInterpolation
+import top.fifthlight.blazerod.model.animation.*
 import top.fifthlight.blazerod.model.util.FloatWrapper
 import top.fifthlight.blazerod.model.util.MutableFloat
 
@@ -19,6 +17,8 @@ abstract class VmdBezierInterpolation<C : VmdBezierInterpolation<C, T>, T : Anim
     }
 
     override fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -28,6 +28,8 @@ abstract class VmdBezierInterpolation<C : VmdBezierInterpolation<C, T>, T : Anim
     ): Unit = error("Unimplemented")
 
     override fun interpolateQuaternionf(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -37,6 +39,8 @@ abstract class VmdBezierInterpolation<C : VmdBezierInterpolation<C, T>, T : Anim
     ): Unit = error("Unimplemented")
 
     override fun interpolateFloat(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -57,6 +61,8 @@ class VmdBezierVector3fInterpolation :
         get() = Type
 
     override fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -88,6 +94,8 @@ class VmdBezierSimpleVector3fInterpolation :
         get() = Type
 
     override fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -113,6 +121,8 @@ class VmdBezierQuaternionfInterpolation :
         get() = Type
 
     override fun interpolateQuaternionf(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -136,6 +146,8 @@ class VmdBezierFloatInterpolation :
         get() = Type
 
     override fun interpolateFloat(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,

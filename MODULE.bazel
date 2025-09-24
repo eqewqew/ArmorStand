@@ -64,7 +64,6 @@ maven.install(
         "org.lwjgl:lwjgl-assimp:jar:natives-linux:3.3.3",
         "org.lwjgl:lwjgl-assimp:jar:natives-macos:3.3.3",
         "org.lwjgl:lwjgl-assimp:jar:natives-macos-arm64:3.3.3",
-        "team.unnamed:mocha:3.0.0",
         "org.javassist:javassist:3.30.2-GA",
 
         # test dependencies
@@ -102,6 +101,17 @@ http_jar(
     downloaded_file_name = "iris.jar",
 )
 http_archive = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+http_archive(
+    name = "mocha",
+    url = "https://repo.maven.apache.org/maven2/team/unnamed/mocha/3.0.1/mocha-3.0.1-sources.jar",
+    sha256 = "325319bfb53aa83bdb8367b03fced9b32fc285e12ec1b9d60134bc16d8170119",
+    build_file = "@//third_party/mocha:BUILD.mocha.bazel",
+    patch_strip = 1,
+    patches = [
+        "@//third_party/mocha/patches:entity_object_property.patch",
+        "@//third_party/mocha/patches:mutable_entity.patch",
+    ],
+)
 # Download YSM for its bundled model
 http_archive(
     name = "yes_steve_model",

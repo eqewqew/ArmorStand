@@ -5,10 +5,7 @@ import org.joml.Quaternionf
 import org.joml.Quaternionfc
 import org.joml.Vector3f
 import org.joml.Vector3fc
-import top.fifthlight.blazerod.model.animation.AnimationChannel
-import top.fifthlight.blazerod.model.animation.AnimationChannelComponent
-import top.fifthlight.blazerod.model.animation.AnimationInterpolation
-import top.fifthlight.blazerod.model.animation.KeyFrameAnimationChannel
+import top.fifthlight.blazerod.model.animation.*
 import top.fifthlight.blazerod.model.util.FloatWrapper
 import top.fifthlight.blazerod.model.util.MutableFloat
 
@@ -36,6 +33,8 @@ class BedrockInterpolation(
     private fun getType(frame: Int) = BedrockLerpMode.entries[lerpModes.getByte(frame).toInt()]
 
     override fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -43,8 +42,19 @@ class BedrockInterpolation(
         endValue: List<Vector3fc>,
         result: Vector3f,
     ) = when (getType(startFrame)) {
-        BedrockLerpMode.LINEAR -> linear.interpolateVector3f(delta, startFrame, endFrame, startValue, endValue, result)
+        BedrockLerpMode.LINEAR -> linear.interpolateVector3f(
+            context,
+            state,
+            delta,
+            startFrame,
+            endFrame,
+            startValue,
+            endValue,
+            result
+        )
         BedrockLerpMode.CATMULLROM -> catmullRom.interpolateVector3f(
+            context,
+            state,
             delta,
             startFrame,
             endFrame,
@@ -55,6 +65,8 @@ class BedrockInterpolation(
     }
 
     override fun interpolateQuaternionf(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -63,6 +75,8 @@ class BedrockInterpolation(
         result: Quaternionf,
     ) = when (getType(startFrame)) {
         BedrockLerpMode.LINEAR -> linear.interpolateQuaternionf(
+            context,
+            state,
             delta,
             startFrame,
             endFrame,
@@ -72,6 +86,8 @@ class BedrockInterpolation(
         )
 
         BedrockLerpMode.CATMULLROM -> catmullRom.interpolateQuaternionf(
+            context,
+            state,
             delta,
             startFrame,
             endFrame,
@@ -82,6 +98,8 @@ class BedrockInterpolation(
     }
 
     override fun interpolateFloat(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -89,8 +107,19 @@ class BedrockInterpolation(
         endValue: List<FloatWrapper>,
         result: MutableFloat,
     ) = when (getType(startFrame)) {
-        BedrockLerpMode.LINEAR -> linear.interpolateFloat(delta, startFrame, endFrame, startValue, endValue, result)
+        BedrockLerpMode.LINEAR -> linear.interpolateFloat(
+            context,
+            state,
+            delta,
+            startFrame,
+            endFrame,
+            startValue,
+            endValue,
+            result
+        )
         BedrockLerpMode.CATMULLROM -> catmullRom.interpolateFloat(
+            context,
+            state,
             delta,
             startFrame,
             endFrame,

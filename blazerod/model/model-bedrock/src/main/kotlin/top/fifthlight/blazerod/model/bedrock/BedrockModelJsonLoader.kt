@@ -6,10 +6,15 @@ import it.unimi.dsi.fastutil.bytes.ByteArrayList
 import it.unimi.dsi.fastutil.floats.FloatArrayList
 import it.unimi.dsi.fastutil.floats.FloatList
 import org.joml.*
+import org.slf4j.LoggerFactory
+import team.unnamed.mocha.MochaEngine
+import team.unnamed.mocha.parser.ast.Expression
 import top.fifthlight.blazerod.model.*
 import top.fifthlight.blazerod.model.animation.*
 import top.fifthlight.blazerod.model.bedrock.animation.*
 import top.fifthlight.blazerod.model.bedrock.metadata.ModelMetadata
+import top.fifthlight.blazerod.model.bedrock.molang.value.MolangValue
+import top.fifthlight.blazerod.model.bedrock.molang.value.MolangVector3f
 import top.fifthlight.blazerod.model.util.readToBuffer
 import top.fifthlight.blazerod.model.util.toRadian
 import java.nio.ByteBuffer
@@ -25,6 +30,49 @@ internal class BedrockModelJsonLoader(
     private val basePath: Path,
     private val file: ModelMetadata.Files.File,
 ) {
+    companion object {
+        private val logger = LoggerFactory.getLogger(BedrockModelJsonLoader::class.java)
+
+        // Six faces: corner indices + normals
+        private val faceCornerIndicesList = listOf(
+            intArrayOf(0, 2, 3, 1),  // north (-Z)
+            intArrayOf(4, 5, 7, 6),  // south (+Z)
+            intArrayOf(0, 4, 6, 2),  // west  (-X)
+            intArrayOf(1, 3, 7, 5),  // east  (+X)
+            intArrayOf(2, 6, 7, 3),  // up    (+Y)
+            intArrayOf(0, 1, 5, 4),  // down  (-Y)
+        )
+        private val faceCornerUvList = listOf(
+            intArrayOf(0, 2, 3, 1),  // north (-Z)
+            intArrayOf(1, 0, 2, 3),  // south (+Z)
+            intArrayOf(1, 0, 2, 3),  // west  (-X)
+            intArrayOf(0, 2, 3, 1),  // east  (+X)
+            intArrayOf(3, 1, 0, 2),  // up    (+Y)
+            intArrayOf(0, 1, 3, 2),  // down  (-Y)
+        )
+        private val faceNormalsList = listOf(
+            Vector3f(0f, 0f, -1f),  // north (-Z)
+            Vector3f(0f, 0f, 1f),   // south (+Z)
+            Vector3f(-1f, 0f, 0f),  // west  (-X)
+            Vector3f(1f, 0f, 0f),   // east  (+X)
+            Vector3f(0f, 1f, 0f),   // up    (+Y)
+            Vector3f(0f, -1f, 0f),  // down  (-Y)
+        )
+        private val triangleOrder = intArrayOf(0, 1, 2, 0, 2, 3)
+        private val cubeIndices = ShortArray(6 * 6).apply {
+            var p = 0
+            for (face in 0 until 6) {
+                val base = face * 4
+                for (t in triangleOrder) {
+                    this[p++] = (base + t).toShort()
+                }
+            }
+        }
+    }
+
+    // Only for parsing molang
+    private val mochaEngine = MochaEngine.create()
+
     private lateinit var materials: List<Material>
     private var materialLoaded = false
     private fun loadTextures() {
@@ -313,44 +361,6 @@ internal class BedrockModelJsonLoader(
 
         fun setFaceSize(faceWidth: Float, faceHeight: Float) {
             uvSize.set(faceWidth, faceHeight)
-        }
-    }
-
-    companion object {
-        // Six faces: corner indices + normals
-        private val faceCornerIndicesList = listOf(
-            intArrayOf(0, 2, 3, 1),  // north (-Z)
-            intArrayOf(4, 5, 7, 6),  // south (+Z)
-            intArrayOf(0, 4, 6, 2),  // west  (-X)
-            intArrayOf(1, 3, 7, 5),  // east  (+X)
-            intArrayOf(2, 6, 7, 3),  // up    (+Y)
-            intArrayOf(0, 1, 5, 4),  // down  (-Y)
-        )
-        private val faceCornerUvList = listOf(
-            intArrayOf(0, 2, 3, 1),  // north (-Z)
-            intArrayOf(1, 0, 2, 3),  // south (+Z)
-            intArrayOf(1, 0, 2, 3),  // west  (-X)
-            intArrayOf(0, 2, 3, 1),  // east  (+X)
-            intArrayOf(3, 1, 0, 2),  // up    (+Y)
-            intArrayOf(0, 1, 3, 2),  // down  (-Y)
-        )
-        private val faceNormalsList = listOf(
-            Vector3f(0f, 0f, -1f),  // north (-Z)
-            Vector3f(0f, 0f, 1f),   // south (+Z)
-            Vector3f(-1f, 0f, 0f),  // west  (-X)
-            Vector3f(1f, 0f, 0f),   // east  (+X)
-            Vector3f(0f, 1f, 0f),   // up    (+Y)
-            Vector3f(0f, -1f, 0f),  // down  (-Y)
-        )
-        private val triangleOrder = intArrayOf(0, 1, 2, 0, 2, 3)
-        private val cubeIndices = ShortArray(6 * 6).apply {
-            var p = 0
-            for (face in 0 until 6) {
-                val base = face * 4
-                for (t in triangleOrder) {
-                    this[p++] = (base + t).toShort()
-                }
-            }
         }
     }
 
@@ -825,30 +835,6 @@ internal class BedrockModelJsonLoader(
         return SceneData(scenes, skins)
     }
 
-    sealed interface MolangValue {
-        data class Plain(val value: Float) : MolangValue
-        data class Molang(val molang: String) : MolangValue
-
-        companion object {
-            val ZERO = Plain(0f)
-        }
-    }
-
-    sealed interface MolangVector3f {
-        data class Plain(val value: Vector3fc) : MolangVector3f {
-            constructor(value: Float) : this(Vector3f(value))
-        }
-
-        data class Molang(
-            val x: MolangValue,
-            val y: MolangValue,
-            val z: MolangValue,
-        ) : MolangVector3f {
-            constructor(molang: String) : this(MolangValue.Molang(molang))
-            constructor(molang: MolangValue.Molang) : this(molang, molang, molang)
-        }
-    }
-
     private fun FloatList.add(value: MolangVector3f.Plain) {
         add(value.value.x())
         add(value.value.y())
@@ -861,19 +847,32 @@ internal class BedrockModelJsonLoader(
         block(z)
     }
 
-    private fun JsonReader.molangValue() = when (val token = peek()) {
+    private fun JsonReader.nextMolangString(): List<Expression>? = nextString().let { str ->
+        try {
+            mochaEngine.parse(str)
+        } catch (ex: Exception) {
+            logger.warn("Failed to parse molang string: $str", ex)
+            null
+        }
+    }
+
+    private fun JsonReader.nextMolangValue() = when (val token = peek()) {
         JsonToken.NUMBER -> MolangValue.Plain(nextDouble().toFloat())
-        JsonToken.STRING -> MolangValue.Molang(nextString())
+
+        JsonToken.STRING -> nextMolangString()?.let {
+            MolangValue.Molang(it)
+        } ?: MolangValue.Plain(0f)
+
         else -> throw BedrockModelLoadException("Unexpected token $token for molang value")
     }
 
-    private fun JsonReader.molangVec3(): MolangVector3f = when (val token = peek()) {
+    private fun JsonReader.nextMolangVec3(): MolangVector3f = when (val token = peek()) {
         JsonToken.BEGIN_ARRAY -> {
             beginArray()
             if (!hasNext()) {
                 throw BedrockModelLoadException("Unexpected end of array for molang vec3 x")
             }
-            val x = molangValue()
+            val x = nextMolangValue()
             if (!hasNext()) {
                 if (x is MolangValue.Plain) {
                     MolangVector3f.Plain(Vector3f(x.value))
@@ -881,11 +880,11 @@ internal class BedrockModelJsonLoader(
                     MolangVector3f.Molang(x, x, x)
                 }
             }
-            val y = molangValue()
+            val y = nextMolangValue()
             if (!hasNext()) {
                 throw BedrockModelLoadException("Unexpected end of array for molang vec3 z")
             }
-            val z = molangValue()
+            val z = nextMolangValue()
             if (hasNext()) {
                 throw BedrockModelLoadException("Unexpected token ${peek()} for molang vec3")
             }
@@ -899,7 +898,10 @@ internal class BedrockModelJsonLoader(
 
         JsonToken.NUMBER -> MolangVector3f.Plain(nextDouble().toFloat())
 
-        JsonToken.STRING -> MolangVector3f.Molang(nextString())
+        JsonToken.STRING -> when (val value = nextMolangValue()) {
+            is MolangValue.Plain -> MolangVector3f.Plain(Vector3f(value.value))
+            is MolangValue.Molang -> MolangVector3f.Molang(value.molang)
+        }
 
         else -> throw BedrockModelLoadException("Unexpect token $token for molang vec3")
     }
@@ -917,19 +919,18 @@ internal class BedrockModelJsonLoader(
     ): ChannelContext {
         val timestamps = FloatArrayList()
         val values = FloatArrayList()
-        var molangs: MutableList<String?>? = null
+        var molangs: MutableList<List<Expression>?>? = null
         var lerpModes: ByteArrayList? = null
         obj { frameTime ->
             when (val token = peek()) {
                 JsonToken.NUMBER, JsonToken.BEGIN_ARRAY, JsonToken.STRING -> {
                     val timestamp = frameTime.toFloat()
                     timestamps.add(timestamp)
-                    when (val value = molangVec3()) {
+                    when (val value = nextMolangVec3()) {
                         is MolangVector3f.Molang -> {
-                            val molangs = molangs
-                                ?: mutableListOf<String?>().also {
-                                    molangs = it
-                                }
+                            val molangs = molangs ?: mutableListOf<List<Expression>?>().also {
+                                molangs = it
+                            }
                             while (molangs.size < (timestamps.size - 1) * 6) {
                                 molangs.add(null)
                             }
@@ -969,8 +970,8 @@ internal class BedrockModelJsonLoader(
                                 // ignore unknown
                             }
 
-                            "pre" -> pre = molangVec3()
-                            "post" -> post = molangVec3()
+                            "pre" -> pre = nextMolangVec3()
+                            "post" -> post = nextMolangVec3()
                             else -> skipValue()
                         }
                     }
@@ -994,7 +995,7 @@ internal class BedrockModelJsonLoader(
 
                     fun add(value: MolangVector3f) = when (value) {
                         is MolangVector3f.Molang -> {
-                            val molangs = molangs ?: mutableListOf<String?>().also {
+                            val molangs = molangs ?: mutableListOf<List<Expression>?>().also {
                                 molangs = it
                             }
                             while (molangs.size < (timestamps.size - 1) * 6) {
@@ -1073,17 +1074,17 @@ internal class BedrockModelJsonLoader(
                         var loop = AnimationLoopMode.NO_LOOP
                         var startDelay: MolangValue = MolangValue.ZERO
                         var loopDelay: MolangValue = MolangValue.ZERO
-                        var animTimeUpdate: MolangValue = MolangValue.ZERO
+                        var animTimeUpdate: MolangValue? = null
                         var blendWeight: MolangValue = MolangValue.ZERO
                         var overridePreviousAnimation: Boolean = false
                         obj { key ->
                             when (key) {
                                 "animation_length" -> animationLength = nextDouble().toFloat()
                                 "override_previous_animation" -> overridePreviousAnimation = nextBoolean()
-                                "start_delay" -> startDelay = molangValue()
-                                "loop_delay" -> loopDelay = molangValue()
-                                "anim_time_update" -> animTimeUpdate = molangValue()
-                                "blend_weight" -> blendWeight = molangValue()
+                                "start_delay" -> startDelay = nextMolangValue()
+                                "loop_delay" -> loopDelay = nextMolangValue()
+                                "anim_time_update" -> animTimeUpdate = nextMolangValue()
+                                "blend_weight" -> blendWeight = nextMolangValue()
 
                                 "loop" -> loop = when (val token = peek()) {
                                     JsonToken.STRING -> when (val mode = nextString()) {
@@ -1118,7 +1119,7 @@ internal class BedrockModelJsonLoader(
                                                 when (val token = peek()) {
                                                     // Single frame
                                                     JsonToken.NUMBER, JsonToken.BEGIN_ARRAY, JsonToken.STRING -> {
-                                                        when (val value = molangVec3()) {
+                                                        when (val value = nextMolangVec3()) {
                                                             is MolangVector3f.Plain -> SingleFrameAnimationChannel(
                                                                 type = AnimationChannel.Type.BedrockRotation,
                                                                 typeData = typeData,
@@ -1129,10 +1130,18 @@ internal class BedrockModelJsonLoader(
                                                                 ),
                                                             )
 
-                                                            is MolangVector3f.Molang -> {
-                                                                // TODO
-                                                                null
-                                                            }
+                                                            is MolangVector3f.Molang -> MolangAnimationChannel(
+                                                                type = AnimationChannel.Type.BedrockRotation,
+                                                                typeData = typeData,
+                                                                valueMapper = { src, dst ->
+                                                                    dst.rotationZYX(
+                                                                        src.z().toRadian(),
+                                                                        -src.y().toRadian(),
+                                                                        -src.x().toRadian(),
+                                                                    )
+                                                                },
+                                                                molangValue = value,
+                                                            )
                                                         }
                                                     }
 
@@ -1156,7 +1165,7 @@ internal class BedrockModelJsonLoader(
                                                     }
 
                                                     else -> throw BedrockModelLoadException("Unknown animation token $token in animation $animationKey channel $key")
-                                                }?.let {
+                                                }.let {
                                                     animationChannels += it
                                                 }
                                             }
@@ -1164,17 +1173,21 @@ internal class BedrockModelJsonLoader(
                                             "position" -> when (val token = peek()) {
                                                 // Single frame
                                                 JsonToken.NUMBER, JsonToken.BEGIN_ARRAY, JsonToken.STRING -> {
-                                                    when (val value = molangVec3()) {
+                                                    when (val value = nextMolangVec3()) {
                                                         is MolangVector3f.Plain -> SingleFrameAnimationChannel(
                                                             type = AnimationChannel.Type.BedrockTranslation,
                                                             typeData = typeData,
                                                             value = value.value.div(16f, Vector3f()),
                                                         )
 
-                                                        is MolangVector3f.Molang -> {
-                                                            // TODO
-                                                            null
-                                                        }
+                                                        is MolangVector3f.Molang -> MolangAnimationChannel(
+                                                            type = AnimationChannel.Type.BedrockTranslation,
+                                                            typeData = typeData,
+                                                            valueMapper = { src, dst ->
+                                                                src.div(16f, dst)
+                                                            },
+                                                            molangValue = value,
+                                                        )
                                                     }
                                                 }
 
@@ -1194,24 +1207,28 @@ internal class BedrockModelJsonLoader(
                                                 }
 
                                                 else -> throw BedrockModelLoadException("Unknown animation token $token in animation $animationKey channel $key")
-                                            }?.let {
+                                            }.let {
                                                 animationChannels += it
                                             }
 
                                             "scale" -> when (val token = peek()) {
                                                 // Single frame
                                                 JsonToken.NUMBER, JsonToken.BEGIN_ARRAY, JsonToken.STRING -> {
-                                                    when (val value = molangVec3()) {
+                                                    when (val value = nextMolangVec3()) {
                                                         is MolangVector3f.Plain -> SingleFrameAnimationChannel(
                                                             type = AnimationChannel.Type.BedrockScale,
                                                             typeData = typeData,
                                                             value = value.value,
                                                         )
 
-                                                        is MolangVector3f.Molang -> {
-                                                            // TODO
-                                                            null
-                                                        }
+                                                        is MolangVector3f.Molang -> MolangAnimationChannel(
+                                                            type = AnimationChannel.Type.BedrockScale,
+                                                            typeData = typeData,
+                                                            valueMapper = { src, dst ->
+                                                                src.div(16f, dst)
+                                                            },
+                                                            molangValue = value,
+                                                        )
                                                     }
                                                 }
 
@@ -1229,7 +1246,7 @@ internal class BedrockModelJsonLoader(
                                                 }
 
                                                 else -> throw BedrockModelLoadException("Unknown animation token $token in animation $animationKey channel $key")
-                                            }?.let {
+                                            }.let {
                                                 animationChannels += it
                                             }
 
@@ -1245,6 +1262,9 @@ internal class BedrockModelJsonLoader(
                             name = animationKey,
                             channels = animationChannels,
                             duration = animationLength,
+                            startDelay = startDelay,
+                            loopDelay = loopDelay,
+                            animTimeUpdate = animTimeUpdate,
                             loopMode = loop,
                         )
                     }
@@ -1282,3 +1302,4 @@ internal class BedrockModelJsonLoader(
         )
     }
 }
+

@@ -8,6 +8,14 @@ data class MutableFloat(
     override var value: Float = 0f,
 ) : FloatWrapper
 
+interface DoubleWrapper {
+    val value: Double
+}
+
+data class MutableDouble(
+    override var value: Double = 0.0,
+) : DoubleWrapper
+
 interface IntWrapper {
     val value: Int
 }

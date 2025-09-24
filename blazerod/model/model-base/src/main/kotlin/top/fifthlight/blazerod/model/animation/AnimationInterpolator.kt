@@ -10,6 +10,8 @@ abstract class AnimationInterpolation(val elements: Int) {
     }
 
     abstract fun interpolateVector3f(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -19,6 +21,8 @@ abstract class AnimationInterpolation(val elements: Int) {
     )
 
     abstract fun interpolateQuaternionf(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -28,6 +32,8 @@ abstract class AnimationInterpolation(val elements: Int) {
     )
 
     abstract fun interpolateFloat(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -41,6 +47,8 @@ abstract class AnimationInterpolation(val elements: Int) {
 
         val linear = object : AnimationInterpolation(1) {
             override fun interpolateVector3f(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -52,6 +60,8 @@ abstract class AnimationInterpolation(val elements: Int) {
             }
 
             override fun interpolateQuaternionf(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -63,6 +73,8 @@ abstract class AnimationInterpolation(val elements: Int) {
             }
 
             override fun interpolateFloat(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -76,6 +88,8 @@ abstract class AnimationInterpolation(val elements: Int) {
 
         val step = object : AnimationInterpolation(1) {
             override fun interpolateVector3f(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -87,6 +101,8 @@ abstract class AnimationInterpolation(val elements: Int) {
             }
 
             override fun interpolateQuaternionf(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -98,6 +114,8 @@ abstract class AnimationInterpolation(val elements: Int) {
             }
 
             override fun interpolateFloat(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -111,6 +129,8 @@ abstract class AnimationInterpolation(val elements: Int) {
 
         val cubicSpline = object : AnimationInterpolation(3) {
             override fun interpolateVector3f(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -136,6 +156,8 @@ abstract class AnimationInterpolation(val elements: Int) {
 
             private val tempQuaternion = Quaternionf()
             override fun interpolateQuaternionf(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -163,6 +185,8 @@ abstract class AnimationInterpolation(val elements: Int) {
             }
 
             override fun interpolateFloat(
+                context: AnimationContext,
+                state: AnimationState,
                 delta: Float,
                 startFrame: Int,
                 endFrame: Int,
@@ -193,6 +217,8 @@ abstract class AnimationInterpolation(val elements: Int) {
 
 interface AnimationInterpolator<T> {
     fun interpolate(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -204,6 +230,8 @@ interface AnimationInterpolator<T> {
 
 class Vector3AnimationInterpolator(val type: AnimationInterpolation) : AnimationInterpolator<Vector3f> {
     override fun interpolate(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -211,6 +239,8 @@ class Vector3AnimationInterpolator(val type: AnimationInterpolation) : Animation
         endValue: List<Vector3f>,
         result: Vector3f,
     ) = type.interpolateVector3f(
+        context = context,
+        state = state,
         delta = delta,
         startFrame = startFrame,
         endFrame = endFrame,
@@ -222,6 +252,8 @@ class Vector3AnimationInterpolator(val type: AnimationInterpolation) : Animation
 
 class QuaternionAnimationInterpolator(val type: AnimationInterpolation) : AnimationInterpolator<Quaternionf> {
     override fun interpolate(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -229,6 +261,8 @@ class QuaternionAnimationInterpolator(val type: AnimationInterpolation) : Animat
         endValue: List<Quaternionf>,
         result: Quaternionf,
     ) = type.interpolateQuaternionf(
+        context = context,
+        state = state,
         delta = delta,
         startFrame = startFrame,
         endFrame = endFrame,
@@ -240,6 +274,8 @@ class QuaternionAnimationInterpolator(val type: AnimationInterpolation) : Animat
 
 class FloatAnimationInterpolator(val type: AnimationInterpolation) : AnimationInterpolator<MutableFloat> {
     override fun interpolate(
+        context: AnimationContext,
+        state: AnimationState,
         delta: Float,
         startFrame: Int,
         endFrame: Int,
@@ -248,6 +284,8 @@ class FloatAnimationInterpolator(val type: AnimationInterpolation) : AnimationIn
         result: MutableFloat,
     ) {
         type.interpolateFloat(
+            context = context,
+            state = state,
             delta = delta,
             startFrame = startFrame,
             endFrame = endFrame,

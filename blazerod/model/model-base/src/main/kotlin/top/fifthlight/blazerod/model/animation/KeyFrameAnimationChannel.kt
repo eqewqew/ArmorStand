@@ -42,19 +42,21 @@ data class KeyFrameAnimationChannel<T : Any, D>(
         val time = state.getTime()
         indexer.findKeyFrames(time, indexResult)
         if (indexResult.startFrame == indexResult.endFrame || time < indexResult.startTime) {
-            keyframeData.get(indexResult.startFrame, startValues, post = false)
+            keyframeData.get(context, state, indexResult.startFrame, startValues, post = false)
             valueSetter(startValues, result)
             return
         }
         if (indexResult.endTime < time) {
-            keyframeData.get(indexResult.endFrame, endValues, post = true)
+            keyframeData.get(context, state, indexResult.endFrame, endValues, post = true)
             valueSetter(endValues, result)
             return
         }
         val delta = (time - indexResult.startTime) / (indexResult.endTime - indexResult.startTime)
-        keyframeData.get(indexResult.startFrame, startValues, post = false)
-        keyframeData.get(indexResult.endFrame, endValues, post = true)
+        keyframeData.get(context, state, indexResult.startFrame, startValues, post = false)
+        keyframeData.get(context, state, indexResult.endFrame, endValues, post = true)
         interpolator.interpolate(
+            context = context,
+            state = state,
             delta = delta,
             startFrame = indexResult.startFrame,
             endFrame = indexResult.endFrame,
