@@ -141,6 +141,7 @@ object ModelResourceLoader {
             skins = info.skins,
             expressions = info.expressions,
             expressionGroups = info.expressionGroups,
+            renderTransform = info.renderTransform,
         )
     }
 }

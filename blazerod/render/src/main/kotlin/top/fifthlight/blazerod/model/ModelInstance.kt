@@ -173,13 +173,13 @@ class ModelInstance(val scene: RenderScene) : AbstractRefCount() {
 
     @JvmOverloads
     fun createRenderTask(
-        modelViewMatrix: Matrix4fc,
+        modelMatrix: Matrix4fc,
         light: Int,
         overlay: Int = 0,
     ): RenderTask {
         return RenderTask.acquire(
             instance = this,
-            modelViewMatrix = modelViewMatrix,
+            modelMatrix = modelMatrix,
             light = light,
             overlay = overlay,
             localMatricesBuffer = modelData.localMatricesBuffer.copy(),
@@ -190,7 +190,11 @@ class ModelInstance(val scene: RenderScene) : AbstractRefCount() {
                     it.content.uploadIndices()
                 }
             },
-        )
+        ).apply {
+            scene.renderTransform?.matrix?.let {
+                this.modelMatrix.mul(it)
+            }
+        }
     }
 
     override fun onClosed() {

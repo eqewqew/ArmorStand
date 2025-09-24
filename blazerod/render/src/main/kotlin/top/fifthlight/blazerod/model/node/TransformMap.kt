@@ -17,7 +17,7 @@ class TransformMap(first: NodeTransform?) {
     private val dirtyTransforms = EnumSet.noneOf(TransformId::class.java)
 
     private val intermediateMatrices = EnumMap<TransformId, Matrix4f>(TransformId::class.java).also {
-        it[TransformId.FIRST] = first?.matrix?.let { mat -> Matrix4f(mat) } ?: Matrix4f()
+        it[TransformId.FIRST] = Matrix4f().also { matrix -> first?.applyOnMatrix(matrix) }
     }
 
     /**
@@ -50,7 +50,7 @@ class TransformMap(first: NodeTransform?) {
         // 如果 startId 是 FIRST 且它自身被标记为脏（意味着需要重新初始化其矩阵），则从原始 transform 获取。
         // 否则，从 intermediateMatrices 获取。
         val baseMatrix = if (startId == TransformId.FIRST && dirtyTransforms.contains(TransformId.FIRST)) {
-            transforms[TransformId.FIRST]!!.matrix.get(tempAccumulatedMatrix)
+            transforms[TransformId.FIRST]!!.setOnMatrix(tempAccumulatedMatrix)
         } else {
             tempAccumulatedMatrix.set(
                 intermediateMatrices[startId]
@@ -73,7 +73,7 @@ class TransformMap(first: NodeTransform?) {
             }
 
             // 将当前变换矩阵与累积矩阵相乘。
-            tempAccumulatedMatrix.mul(transform.matrix)
+            transform.applyOnMatrix(tempAccumulatedMatrix)
 
             // 存储当前的累积矩阵到缓存中，并标记为不脏。
             val matrixToUpdate = intermediateMatrices.getOrPut(currentId) { Matrix4f() }
@@ -144,9 +144,9 @@ class TransformMap(first: NodeTransform?) {
             // 如果不存在或类型不匹配，则从当前矩阵或默认值创建新的 Decomposed 变换。
             // 尝试从现有矩阵中提取平移、旋转、缩放信息，否则使用默认值。
             targetTransform = NodeTransform.Decomposed(
-                translation = currentTransform?.matrix?.getTranslation(Vector3f()) ?: Vector3f(),
-                rotation = currentTransform?.matrix?.getUnnormalizedRotation(Quaternionf()) ?: Quaternionf(),
-                scale = currentTransform?.matrix?.getScale(Vector3f()) ?: Vector3f(1f)
+                translation = currentTransform?.getTranslation(Vector3f()) ?: Vector3f(),
+                rotation = currentTransform?.getRotation(Quaternionf()) ?: Quaternionf(),
+                scale = currentTransform?.getScale(Vector3f()) ?: Vector3f(1f)
             )
             transforms[id] = targetTransform // 替换旧的变换
             intermediateMatrices.getOrPut(id, ::Matrix4f)
@@ -173,9 +173,9 @@ class TransformMap(first: NodeTransform?) {
         } else {
             // 如果不存在或类型不匹配，则从当前矩阵或默认值创建新的 Matrix 变换。
             // 如果没有现有矩阵，则使用单位矩阵。
-            targetTransform = NodeTransform.Matrix(
-                matrix = currentTransform?.matrix ?: Matrix4f() // 如果没有，则为单位矩阵
-            )
+            targetTransform = NodeTransform.Matrix().apply {
+                currentTransform?.setOnMatrix(matrix)
+            }
             transforms[id] = targetTransform // 替换旧的变换
             intermediateMatrices.getOrPut(id, ::Matrix4f)
         }

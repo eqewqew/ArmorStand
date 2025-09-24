@@ -166,6 +166,7 @@ data class ModelLoadInfo<Texture : Any?, Index : Any, Vertex : Any, Morph : Any>
     val skins: List<RenderSkin>,
     val expressions: List<RenderExpression>,
     val expressionGroups: List<RenderExpressionGroup>,
+    val renderTransform: NodeTransform?,
 )
 
 typealias PreProcessModelLoadInfo = ModelLoadInfo<TextureLoadData?, IndexBufferLoadData, ByteBuffer, MorphTargetsLoadData<MorphTargetsLoadData.TargetInfo>>

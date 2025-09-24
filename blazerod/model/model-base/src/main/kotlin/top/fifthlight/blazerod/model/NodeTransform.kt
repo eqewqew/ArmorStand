@@ -20,6 +20,9 @@ interface NodeTransformView {
         val scale: Vector3f
     }
 
+    fun setOnMatrix(matrix: Matrix4f): Matrix4f
+    fun applyOnMatrix(matrix: Matrix4f): Matrix4f
+
     fun clone(): NodeTransform
     fun toDecomposed(): NodeTransform.Decomposed
     fun toMatrix(): NodeTransform.Matrix = NodeTransform.Matrix(matrix)
@@ -37,18 +40,21 @@ abstract class NodeTransform : NodeTransformView {
         constructor() : this(Matrix4f())
         constructor(matrix: Matrix4fc) : this(Matrix4f(matrix))
 
+        override fun setOnMatrix(matrix: Matrix4f): Matrix4f = matrix.set(this.matrix)
+        override fun applyOnMatrix(matrix: Matrix4f): Matrix4f = matrix.mul(this.matrix)
+
         override fun clone() = Matrix(
             matrix = matrix,
         )
 
         override fun toDecomposed() = Decomposed(
             translation = matrix.getTranslation(Vector3f()),
-            rotation = matrix.getNormalizedRotation(Quaternionf()),
+            rotation = matrix.getUnnormalizedRotation(Quaternionf()),
             scale = matrix.getScale(Vector3f()),
         )
 
         override fun getTranslation(dest: Vector3f): Vector3f = matrix.getTranslation(dest)
-        override fun getRotation(dest: Quaternionf): Quaternionf = matrix.getNormalizedRotation(dest)
+        override fun getRotation(dest: Quaternionf): Quaternionf = matrix.getUnnormalizedRotation(dest)
         override fun getScale(dest: Vector3f): Vector3f = matrix.getScale(dest)
     }
 
@@ -72,8 +78,16 @@ abstract class NodeTransform : NodeTransformView {
         override val matrix: Matrix4f
             get() = cacheMatrix.translationRotateScale(translation, rotation, scale)
 
+        override fun setOnMatrix(matrix: Matrix4f): Matrix4f = matrix
+            .translationRotateScale(translation, rotation, scale)
+
+        override fun applyOnMatrix(matrix: Matrix4f): Matrix4f = matrix
+            .translate(translation)
+            .rotate(rotation)
+            .scale(scale)
+
         override fun getTranslation(dest: Vector3f): Vector3f = dest.set(translation)
-        override fun getRotation(dest: Quaternionf): Quaternionf = dest.set(rotation)
+        override fun getRotation(dest: Quaternionf): Quaternionf = dest.set(rotation.normalize())
         override fun getScale(dest: Vector3f): Vector3f = dest.set(scale)
 
         fun set(other: NodeTransformView.Decomposed) {
@@ -118,6 +132,20 @@ abstract class NodeTransform : NodeTransformView {
                 .rotate(rotation)
                 .translate(-pivot.x, -pivot.y, -pivot.z)
                 .translate(translation)
+
+        override fun setOnMatrix(matrix: Matrix4f): Matrix4f = matrix
+            .scaling(scale)
+            .translate(pivot)
+            .rotate(rotation)
+            .translate(-pivot.x, -pivot.y, -pivot.z)
+            .translate(translation)
+
+        override fun applyOnMatrix(matrix: Matrix4f): Matrix4f = matrix
+            .scale(scale)
+            .translate(pivot)
+            .rotate(rotation)
+            .translate(-pivot.x, -pivot.y, -pivot.z)
+            .translate(translation)
 
         override fun getTranslation(dest: Vector3f): Vector3f = dest.set(translation)
         override fun getRotation(dest: Quaternionf): Quaternionf = dest.set(rotation)

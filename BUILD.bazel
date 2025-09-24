@@ -30,6 +30,7 @@ define_kt_toolchain(
     jvm_target = "21",
     api_version = "2.0",
     language_version = "2.0",
+    experimental_use_abi_jars = True,
 )
 
 extract_update_log(

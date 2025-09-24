@@ -175,6 +175,7 @@ class SceneReconstructor private constructor(private val info: GpuLoadModelLoadI
             expressions = info.expressions,
             expressionGroups = info.expressionGroups,
             cameras = cameras,
+            renderTransform = info.renderTransform,
         )
     }
 

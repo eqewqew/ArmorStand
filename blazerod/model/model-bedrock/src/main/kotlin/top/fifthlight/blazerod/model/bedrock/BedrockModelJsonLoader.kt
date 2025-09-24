@@ -27,6 +27,7 @@ import kotlin.io.path.bufferedReader
 import kotlin.math.floor
 
 internal class BedrockModelJsonLoader(
+    private val properties: ModelMetadata.Properties?,
     private val basePath: Path,
     private val file: ModelMetadata.Files.File,
 ) {
@@ -829,6 +830,11 @@ internal class BedrockModelJsonLoader(
                             )
                         )
                     )
+                },
+                transform = NodeTransform.Decomposed().apply {
+                    val widthScale = properties?.widthScale ?: 0.7f
+                    val heightScale = properties?.heightScale ?: widthScale
+                    scale.set(widthScale, heightScale, widthScale)
                 },
             )
         }

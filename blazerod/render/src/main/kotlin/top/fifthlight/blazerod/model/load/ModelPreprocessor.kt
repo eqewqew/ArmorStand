@@ -642,6 +642,7 @@ class ModelPreprocessor private constructor(
             morphTargetInfos = morphTargetInfos,
             expressions = expressions,
             expressionGroups = expressionGroups,
+            renderTransform = scene.transform,
         )
     }
 

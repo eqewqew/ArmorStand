@@ -2,12 +2,15 @@ package top.fifthlight.blazerod.animation.context
 
 import net.minecraft.client.option.Perspective
 import net.minecraft.component.DataComponentTypes
+import net.minecraft.entity.LivingEntity
 import net.minecraft.entity.player.PlayerEntity
 import net.minecraft.util.Identifier
+import net.minecraft.util.math.MathHelper
 import top.fifthlight.blazerod.model.animation.AnimationContext
 import top.fifthlight.blazerod.model.animation.AnimationContext.Property.*
 import top.fifthlight.blazerod.model.animation.AnimationContext.RenderingTargetType
 import top.fifthlight.blazerod.util.ObjectPool
+import kotlin.math.abs
 
 open class PlayerEntityAnimationContext protected constructor() : LivingEntityAnimationContext(), AutoCloseable {
     companion object {
@@ -67,14 +70,35 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
     override val entity: PlayerEntity
         get() = realPlayerEntity ?: throw IllegalStateException("Entity is null")
 
+    private fun clampBodyYaw(entity: LivingEntity, degrees: Float, tickProgress: Float): Float {
+        if (entity.vehicle is LivingEntity) {
+            var f = MathHelper.lerpAngleDegrees(tickProgress, entity.lastBodyYaw, entity.bodyYaw)
+            val g = 85.0f
+            val h = MathHelper.clamp(MathHelper.wrapDegrees(degrees - f), -g, g)
+            f = degrees - h
+            if (abs(h) > 50.0f) {
+                f += h * 0.2f
+            }
+
+            return f
+        } else {
+            return MathHelper.lerpAngleDegrees(tickProgress, entity.lastBodyYaw, entity.bodyYaw)
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
     override fun <T> getProperty(type: AnimationContext.Property<T>): T? = when (type) {
         RenderTarget -> RenderingTargetType.PLAYER
 
-        // FIXME
-        PlayerHeadXRotation -> floatBuffer.apply { value = 0f }
+        PlayerHeadXRotation -> floatBuffer.apply {
+            val rawBodyYaw = MathHelper.lerpAngleDegrees(getDeltaTick(), entity.lastHeadYaw, entity.headYaw)
+            val bodyYaw = clampBodyYaw(entity, rawBodyYaw, getDeltaTick())
+            value = -MathHelper.wrapDegrees(rawBodyYaw - bodyYaw)
+        }
 
-        PlayerHeadYRotation -> floatBuffer.apply { value = entity.headYaw }
+        PlayerHeadYRotation -> floatBuffer.apply {
+            value = entity.getLerpedPitch(getDeltaTick())
+        }
 
         PlayerIsFirstPerson -> booleanBuffer.apply {
             val isSelf = entity == client.player
@@ -102,9 +126,12 @@ open class PlayerEntityAnimationContext protected constructor() : LivingEntityAn
 
         PlayerIsSwimming -> booleanBuffer.apply { value = entity.isSwimming }
 
-        PlayerBodyXRotation -> floatBuffer.apply { value = entity.pitch }
+        PlayerBodyXRotation -> floatBuffer.apply {
+            val rawBodyYaw = MathHelper.lerpAngleDegrees(getDeltaTick(), entity.lastHeadYaw, entity.headYaw)
+            val bodyYaw = clampBodyYaw(entity, rawBodyYaw, getDeltaTick())
+            value = -bodyYaw
+        }
 
-        // FIXME
         PlayerBodyYRotation -> floatBuffer.apply { value = 0f }
 
         PlayerIsEating -> booleanBuffer.apply {

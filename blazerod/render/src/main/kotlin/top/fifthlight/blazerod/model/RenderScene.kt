@@ -23,6 +23,7 @@ class RenderScene(
     val expressions: List<RenderExpression>,
     val expressionGroups: List<RenderExpressionGroup>,
     val cameras: List<RenderCamera>,
+    val renderTransform: NodeTransform?,
 ) : AbstractRefCount() {
     companion object {
         private val TYPE_ID = Identifier.of("blazerod", "scene")

@@ -55,6 +55,7 @@ class BedrockModelLoader : ModelFileLoader {
         val metadata = readMetadataFile(path)
 
         val (mainModel, mainAnimations) = BedrockModelJsonLoader(
+            properties = metadata.properties,
             basePath = basePath,
             file = metadata.files.player,
         ).load("main") ?: return EMPTY_LOAD_RESULT

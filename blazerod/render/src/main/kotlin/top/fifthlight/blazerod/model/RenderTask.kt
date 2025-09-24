@@ -76,7 +76,7 @@ class RenderTask private constructor(
         @JvmStatic
         fun acquire(
             instance: ModelInstance,
-            modelViewMatrix: Matrix4fc,
+            modelMatrix: Matrix4fc,
             light: Int,
             overlay: Int = 0,
             localMatricesBuffer: CowBuffer<LocalMatricesBuffer>,
@@ -90,7 +90,7 @@ class RenderTask private constructor(
             this._instance = instance
             this._light = light
             this._overlay = overlay
-            this._modelMatrix.set(modelViewMatrix)
+            this._modelMatrix.set(modelMatrix)
             this._localMatricesBuffer = localMatricesBuffer
             this._skinBuffer = skinBuffer
             this._morphTargetBuffer = morphTargetBuffer

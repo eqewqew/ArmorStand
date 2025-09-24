@@ -96,9 +96,9 @@ data class ModelMetadata(
     @Serializable
     data class Properties(
         @SerialName("height_scale")
-        val heightScale: Double? = null,
+        val heightScale: Float? = null,
         @SerialName("width_scale")
-        val widthScale: Double? = null,
+        val widthScale: Float? = null,
         @SerialName("default_texture")
         val defaultTexture: String? = null,
         val free: Boolean,
