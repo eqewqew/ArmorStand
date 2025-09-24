@@ -39,5 +39,6 @@ merge_jij(
     visibility = ["//visibility:public"],
     deps = {
         "@mocha//:mocha": "team_unnamed_mocha:3.0.1",
+        "@maven//:org_javassist_javassist": "org_javassist_javassist:3.30.2-GA",
     },
 )

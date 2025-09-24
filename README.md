@@ -65,6 +65,8 @@ Apache 2.0 许可证授权。
 
 捆绑了 [mocha](https://github.com/unnamed/mocha)（MIT）项目作为 molang 执行引擎，在此感谢。
 
+捆绑了 [Javassist](https://github.com/jboss-javassist/javassist)（MPL 1.1 或 LGPL 2.1-or-later 或 Apache 2.0）作为 mocha 的代码生成引擎，在此感谢。
+
 ## 许可证
 
 本 mod 以 LGPL 3.0 及以上版本授权，在发布和修改时请遵守许可证要求。
@@ -151,6 +153,9 @@ Thanks for [GeckoLib](https://github.com/bernie-g/geckolib)(MIT) project for pro
 rendering.
 
 Bundled [mocha](https://github.com/unnamed/mocha)(MIT) project as executing engine of molang, thanks to them.
+
+Bundled [Javassist](https://github.com/jboss-javassist/javassist)(MPL 1.1, LGPL 2.1-or-later or Apache 2.0) as code
+generation engine of mocha, thanks to them.
 
 ## License
 
