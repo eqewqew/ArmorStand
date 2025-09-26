@@ -44,9 +44,7 @@ java_library(
     deps = [
         ":remapped_client_access_widened_named",
         ":remapped_deps",
-        "//blazerod/model/model-base",
-        "//blazerod/model/model-formats",
-        "//blazerod/render:render_unmapped",
+        "//blazerod:blazerod_without_jij",
         "@maven//:net_fabricmc_fabric_loader",
         "@minecraft//:%s_client_libraries" % game_version,
     ],
@@ -72,7 +70,7 @@ merge_jij(
         "//blazerod/model/model-pmd": "blazerod-model-formats-pmd:=",
         "//blazerod/model/model-pmx": "blazerod-model-formats-pmx:=",
         "//blazerod/model/model-vmd": "blazerod-model-formats-vmd:=",
-        "//blazerod/render": "blazerod-render:=",
+        "//blazerod/render:render_fabric_merged": "blazerod-render:=",
     },
 )
 

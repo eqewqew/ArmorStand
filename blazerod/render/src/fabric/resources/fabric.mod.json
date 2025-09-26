@@ -16,7 +16,7 @@
   "entrypoints": {
     "client": [
       {
-        "value": "top.fifthlight.blazerod.BlazeRod",
+        "value": "top.fifthlight.blazerod.BlazeRodFabric",
         "adapter": "kotlin"
       }
     ]

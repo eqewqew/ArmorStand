@@ -11,6 +11,7 @@ load("//rule:generate_remap_classpath.bzl", "generate_remap_classpath")
 load("//rule:merge_jar.bzl", "merge_jar")
 load("//rule:merge_jij.bzl", "merge_jij")
 load("//rule:remap_jar.bzl", "remap_jar")
+load("//rule:merge_library.bzl", "kt_merge_library", "merge_library_jar")
 
 extract_access_widener(
     name = "access_widener_dep_intermediary",
@@ -75,7 +76,7 @@ fabric_mod_json_jar(
     },
 )
 
-kt_jvm_library(
+kt_merge_library(
     name = "mod_main_unmapped",
     srcs = glob(
         include = [
@@ -84,7 +85,6 @@ kt_jvm_library(
         ],
         allow_empty = True,
     ),
-    module_name = "top_fifthlight_armorstand",
     resource_jars = [":fabric_mod_json"],
     resources = glob(
         include = ["src/main/resources/**"],
@@ -110,7 +110,7 @@ remap_jar(
     to_namespace = "intermediary",
 )
 
-kt_jvm_library(
+kt_merge_library(
     name = "mod_client_unmapped",
     srcs = glob(
         include = [
@@ -193,7 +193,7 @@ merge_jij(
         "//blazerod/model/model-pmx": "blazerod-model-formats-pmx:=",
         "//blazerod/model/model-vmd": "blazerod-model-formats-vmd:=",
         "//blazerod/model/model-bedrock": "blazerod-model-formats-bedrock:=",
-        "//blazerod/render": "blazerod-render:=",
+        "//blazerod/render:render_fabric_merged": "blazerod-render:=",
     },
 )
 

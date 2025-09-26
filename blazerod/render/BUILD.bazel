@@ -1,134 +1,29 @@
-load("@rules_java//java:defs.bzl", "java_binary", "java_library")
-load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library", "kt_jvm_test")
-load("//:properties.bzl", "blazerod_version", "game_version")
-load("//rule:apply_access_widener.bzl", "apply_access_widener")
-load("//rule:decompile_jar.bzl", "decompile_jar")
-load("//rule:extract_access_widener.bzl", "extract_access_widener")
-load("//rule:fabric_mod_json_jar.bzl", "fabric_mod_json_jar")
-load("//rule:merge_jar.bzl", "merge_jar")
 load("//rule:remap_jar.bzl", "remap_jar")
 
-extract_access_widener(
-    name = "access_widener_dep_intermediary",
-    inputs = ["@maven//:net_fabricmc_fabric_api_fabric_api"],
-)
-
-remap_jar(
-    name = "remapped_deps",
-    classpath = [
-        "//game:remapped_client_intermediary",
-    ],
-    from_namespace = "intermediary",
-    inputs = ["@maven//:net_fabricmc_fabric_api_fabric_api"],
-    mapping = "//game:merged_mapping",
-    mixin = True,
-    remap_transitive_deps = True,
-    remove_jar_in_jar = True,
-    to_namespace = "named",
-)
-
-extract_access_widener(
-    name = "access_widener_dep_named",
-    inputs = [":remapped_deps"],
-)
-
-apply_access_widener(
-    name = "remapped_client_access_widened_named",
-    srcs = [
-        "src/main/resources/blazerod.accesswidener",
-        ":access_widener_dep_named",
-    ],
-    input = "//game:remapped_client_named",
-)
-
-decompile_jar(
-    name = "decompile_client_access_widened_named",
-    inputs = [":remapped_client_access_widened_named"],
-)
-
-fabric_mod_json_jar(
-    name = "fabric_mod_json",
-    src = "src/main/resources/fabric.mod.json",
-    resource_strip_prefix = "blazerod/render",
-    substitutions = {
-        "${version}": blazerod_version,
-    },
-)
-
-kt_jvm_library(
-    name = "render_unmapped",
-    srcs = glob(
-        include = [
-            "src/main/kotlin/**/*.kt",
-            "src/main/java/**/*.java",
-        ],
-        allow_empty = True,
-    ),
-    module_name = "top_fifthlight_blazerod_render",
-    resource_jars = [
-        ":fabric_mod_json",
-        "//blazerod:icon",
-    ],
-    resources = glob(
-        include = ["src/main/resources/**"],
-        exclude = ["src/main/resources/fabric.mod.json"],
-    ),
+alias(
+    name = "render_fabric_unmapped",
     visibility = ["//visibility:public"],
-    deps = [
-        ":remapped_client_access_widened_named",
-        ":remapped_deps",
-        "//blazerod/model/model-formats",
-        "//game:remapped_client_named",
-        "//game:remapped_iris",
-        "//game:remapped_sodium",
-        "@maven//:io_github_llamalad7_mixinextras_fabric",
-        "@maven//:net_fabricmc_fabric_language_kotlin",
-        "@maven//:net_fabricmc_fabric_loader",
-        "@maven//:net_fabricmc_sponge_mixin",
-        "@minecraft//:%s_client_libraries" % game_version,
-    ],
+    actual = "//blazerod/render/src/fabric:fabric_unmapped",
+)
+
+alias(
+    name = "render_fabric_unmapped_merged",
+    visibility = ["//visibility:public"],
+    actual = "//blazerod/render/src/fabric:fabric_unmapped_merged",
 )
 
 remap_jar(
-    name = "render",
+    name = "render_fabric_merged",
+    visibility = ["//visibility:public"],
     classpath = ["//game:remapped_client_named"],
     from_namespace = "named",
-    inputs = [":render_unmapped"],
+    inputs = [":render_fabric_unmapped_merged"],
     mapping = "//game:merged_mapping",
     mixin = True,
     to_namespace = "intermediary",
-    visibility = ["//visibility:public"],
 )
 
-kt_jvm_test(
-    name = "standalone_tests",
-    srcs = [
-        "src/test/kotlin/top/fifthlight/blazerod/test/StandaloneTest.kt",
-        "src/test/kotlin/top/fifthlight/blazerod/test/layout/Std140Test.kt",
-        "src/test/kotlin/top/fifthlight/blazerod/test/layout/Std430Test.kt",
-        "src/test/kotlin/top/fifthlight/blazerod/test/model/node/TransformMapTest.kt",
-    ],
-    args = [
-        "execute",
-        "--select-class",
-        "top.fifthlight.blazerod.test.StandaloneTest",
-    ],
-    associates = [
-        ":render_unmapped",
-    ],
-    main_class = "org.junit.platform.console.ConsoleLauncher",
-    runtime_deps = [
-        "@maven//:org_junit_jupiter_junit_jupiter_engine",
-        "@maven//:org_junit_platform_junit_platform_console",
-        "@maven//:org_junit_platform_junit_platform_suite_engine",
-    ],
-    deps = [
-        ":remapped_deps",
-        "//blazerod/model/model-formats",
-        "//game:remapped_client_named",
-        "@minecraft//:%s_client_libraries" % game_version,
-        "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
-        "@maven//:org_junit_jupiter_junit_jupiter_api",
-        "@maven//:org_junit_platform_junit_platform_suite_api",
-    ],
+test_suite(
+    name = "tests",
+    tests = ["//blazerod/render/src/test:standalone_tests"],
 )

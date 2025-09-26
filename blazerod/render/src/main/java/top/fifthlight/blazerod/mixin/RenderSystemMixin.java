@@ -16,11 +16,11 @@ import java.util.function.BiFunction;
 public abstract class RenderSystemMixin {
     @Inject(method = "flipFrame", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/WorldRenderer;rotate()V", shift = At.Shift.AFTER))
     private static void onFlipFrame(long windowHandle, TracyFrameCapturer tracyFrameCapturer, CallbackInfo ci) {
-        RenderEvents.FLIP_FRAME.invoker().onFrameFlipped();
+        RenderEvents.FLIP_FRAME.getInvoker().onFrameFlipped();
     }
 
     @Inject(method = "initRenderer", at = @At("TAIL"))
     private static void afterInitRenderer(long contextId, int debugVerbosity, boolean sync, BiFunction<Identifier, ShaderType, String> shaderSourceGetter, boolean renderDebugLabels, CallbackInfo ci) {
-        RenderEvents.INITIALIZE_DEVICE.invoker().onDeviceInitialized();
+        RenderEvents.INITIALIZE_DEVICE.getInvoker().onDeviceInitialized();
     }
 }

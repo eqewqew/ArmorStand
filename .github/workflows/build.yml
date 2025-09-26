@@ -37,7 +37,7 @@ jobs:
             --verbose_failures \
             @//blazerod/model/model-gltf:glb_load_test \
             @//blazerod/model/model-pmx:pmx_load_test \
-            @//blazerod/render:standalone_tests
+            @//blazerod/render:tests
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:

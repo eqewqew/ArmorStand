@@ -35,10 +35,9 @@ kt_jvm_library(
         "//:license_jar"
     ],
     exports = [
-        "//blazerod/render:render_unmapped",
-    ],
-    runtime_deps = [
+        "//blazerod/model/model-base",
         "//blazerod/model/model-formats",
+        "//blazerod/render:render_fabric_unmapped",
     ],
 )
 
@@ -54,6 +53,6 @@ merge_jij(
         "//blazerod/model/model-pmx": "blazerod-model-formats-pmx:=",
         "//blazerod/model/model-vmd": "blazerod-model-formats-vmd:=",
         "//blazerod/model/model-bedrock": "blazerod-model-formats-bedrock:=",
-        "//blazerod/render": "blazerod-render:=",
+        "//blazerod/render:render_fabric_merged": "blazerod-render:=",
     },
 )

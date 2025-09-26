@@ -15,17 +15,6 @@ bazel_dep(name = "rules_kotlin", version = "2.1.9")
 bazel_dep(name = "rules_jvm_external", version = "6.7")
 bazel_dep(name = "bazel_skylib", version = "1.7.1")
 
-archive_override(
-    module_name = "rules_kotlin",
-    url = "https://github.com/bazelbuild/rules_kotlin/releases/download/v2.1.9/rules_kotlin-v2.1.9.tar.gz",
-    integrity = "sha256-IbKzUPSFYAC9fj61W+/jchmyN/s3zDuicliMfu5LTOo=",
-    patches = [
-        "//external/rules_kotlin/patches:common_srcs.patch",
-        "//external/rules_kotlin/patches:module_dot_bazel_version.patch",
-    ],
-    patch_strip = 1,
-)
-
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     artifacts = [
@@ -50,6 +39,7 @@ maven.install(
         "net.neoforged:srgutils:1.0.10",
         "io.codechicken:DiffPatch:2.0.0.36:all",
         "net.neoforged.jst:jst-cli-bundle:1.0.74",
+        "com.palantir.javapoet:javapoet:0.7.0",
 
         # mod dependencies
         "net.fabricmc:fabric-loader:0.16.14",

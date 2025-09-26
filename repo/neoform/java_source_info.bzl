@@ -3,7 +3,7 @@ def _java_source_info_init(*, source_jar, deps = [], libraries = []):
         "source_jar": source_jar,
         "transitive_libraries": depset(
             transitive = [dep.transitive_libraries for dep in deps],
-            direct = libraries,
+            direct = [library for library in libraries],
         ),
         "libraries": libraries,
     }

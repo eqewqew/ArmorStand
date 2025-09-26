@@ -31,11 +31,11 @@ import top.fifthlight.blazerod.model.uniform.MorphDataUniformBuffer
 import top.fifthlight.blazerod.model.uniform.SkinModelIndicesUniformBuffer
 import top.fifthlight.blazerod.pipeline.ComputePipeline
 import top.fifthlight.blazerod.render.BlazerodVertexFormats
+import top.fifthlight.blazerod.render.IrisApis
 import top.fifthlight.blazerod.render.setIndexBuffer
 import top.fifthlight.blazerod.systems.ComputePass
 import top.fifthlight.blazerod.util.BitmapItem
 import top.fifthlight.blazerod.util.GpuShaderDataPool
-import top.fifthlight.blazerod.util.IrisApiWrapper
 import top.fifthlight.blazerod.util.ObjectPool
 import top.fifthlight.blazerod.util.ceilDiv
 import top.fifthlight.blazerod.util.ofSsbo
@@ -367,7 +367,7 @@ class ComputeShaderTransformRenderer private constructor() :
             modelMatrix.mulLocal(task.modelMatrix)
             modelMatrix.normal(modelNormalMatrix)
 
-            val irisVertexFormat = IrisApiWrapper.shaderPackInUse
+            val irisVertexFormat = IrisApis.shaderPackInUse
             val targetVertexFormat = if (irisVertexFormat) {
                 BlazerodVertexFormats.IRIS_ENTITY_PADDED
             } else {
@@ -499,7 +499,7 @@ class ComputeShaderTransformRenderer private constructor() :
         modelMatrix.normal(modelNormalMatrix)
         modelMatrix.mulLocal(RenderSystem.getModelViewStack())
 
-        val irisVertexFormat = IrisApiWrapper.shaderPackInUse
+        val irisVertexFormat = IrisApis.shaderPackInUse
         val targetVertexFormat = if (irisVertexFormat) {
             BlazerodVertexFormats.IRIS_ENTITY_PADDED
         } else {

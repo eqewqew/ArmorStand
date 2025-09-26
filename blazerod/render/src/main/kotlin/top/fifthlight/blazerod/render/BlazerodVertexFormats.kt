@@ -2,7 +2,6 @@ package top.fifthlight.blazerod.render
 
 import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.blaze3d.vertex.VertexFormatElement
-import net.irisshaders.iris.vertices.IrisVertexFormats
 import net.minecraft.client.render.VertexFormats
 
 object BlazerodVertexFormats {
@@ -61,10 +60,10 @@ object BlazerodVertexFormats {
             .add("UV2", VertexFormatElement.UV2)                          // 4  32
             .add("Normal", VertexFormatElement.NORMAL)                    // 3  35
             .padding(1)                                                   // 1  36
-            .add("iris_Entity", IrisVertexFormats.ENTITY_ID_ELEMENT)      // 6  42
+            .add("iris_Entity", IrisApis.ENTITY_ID_ELEMENT)               // 6  42
             .padding(2)                                                   // 2  44
-            .add("mc_midTexCoord", IrisVertexFormats.MID_TEXTURE_ELEMENT) // 8  52
-            .add("at_tangent", IrisVertexFormats.TANGENT_ELEMENT)         // 4  56
+            .add("mc_midTexCoord", IrisApis.MID_TEXTURE_ELEMENT)          // 8  52
+            .add("at_tangent", IrisApis.TANGENT_ELEMENT)                  // 4  56
             .padding(8)                                                   // 8  64
             .build()
     }

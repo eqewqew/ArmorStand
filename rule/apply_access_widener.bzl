@@ -22,6 +22,7 @@ def _apply_access_widener_impl(ctx):
         JavaInfo(
             output_jar = output_file,
             compile_jar = output_file,
+            neverlink = ctx.attr.neverlink,
         ),
         DefaultInfo(files = depset([output_file])),
     ]
@@ -35,9 +36,13 @@ apply_access_widener = rule(
             doc = "Input JAR file",
         ),
         "srcs": attr.label_list(
-             allow_files = [".accesswidener"],
-             mandatory = True,
-             doc = "List of access widener files",
+            allow_files = [".accesswidener"],
+            mandatory = True,
+            doc = "List of access widener files",
+        ),
+        "neverlink": attr.bool(
+            default = False,
+            mandatory = False,
         ),
         "_transformer_bin": attr.label(
             default = Label("//rule/access_widener_transformer"),
