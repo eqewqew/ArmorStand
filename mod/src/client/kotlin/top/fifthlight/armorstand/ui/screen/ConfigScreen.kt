@@ -30,7 +30,7 @@ class ConfigScreen(parent: Screen? = null) : ArmorStandScreen<ConfigScreen, Conf
     title = Text.translatable("armorstand.config"),
 ) {
     override fun keyPressed(keyCode: Int, scanCode: Int, modifiers: Int): Boolean {
-        if (keyCode == GLFW.GLFW_KEY_1 && hasControlDown() && ArmorStandClient.debug) {
+        if (keyCode == GLFW.GLFW_KEY_1 && hasControlDown() && ArmorStandClient.instance.debug) {
             client?.setScreen(DebugScreen(this))
             return true
         }

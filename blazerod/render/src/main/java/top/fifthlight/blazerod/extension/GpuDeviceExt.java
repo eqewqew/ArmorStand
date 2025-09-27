@@ -2,8 +2,8 @@ package top.fifthlight.blazerod.extension;
 
 import com.mojang.blaze3d.buffers.GpuBuffer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 

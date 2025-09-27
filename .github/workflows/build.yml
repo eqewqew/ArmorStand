@@ -21,8 +21,10 @@ jobs:
         run: |
           bazel build \
             --verbose_failures \
-            @//mod \
-            @//blazerod \
+            @//mod:mod_fabric \
+            @//mod:mod_neoforge \
+            @//blazerod:blazerod_fabric \
+            @//blazerod:blazerod_neoforge \
             @//blazerod/model/model-base \
             @//blazerod/model/model-formats \
             @//blazerod/model/model-gltf \
@@ -37,14 +39,16 @@ jobs:
             --verbose_failures \
             @//blazerod/model/model-gltf:glb_load_test \
             @//blazerod/model/model-pmx:pmx_load_test \
-            @//blazerod/render:standalone_tests
+            @//blazerod/render:tests
       - name: capture build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: artifacts-bazel
           path: |
-            bazel-bin/mod/mod.jar
-            bazel-bin/blazerod/blazerod.jar
+            bazel-bin/mod/mod_fabric.jar
+            bazel-bin/mod/mod_neoforge.jar
+            bazel-bin/blazerod/blazerod_fabric.jar
+            bazel-bin/blazerod/blazerod_neoforge.jar
             bazel-bin/blazerod/model/model-base/model-base.jar
             bazel-bin/blazerod/model/model-formats/model-formats.jar
             bazel-bin/blazerod/model/model-gltf/model-gltf.jar

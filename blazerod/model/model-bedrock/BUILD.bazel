@@ -1,14 +1,13 @@
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
-load("//:properties.bzl", "blazerod_version")
-load("//rule:fabric_mod_json_jar.bzl", "fabric_mod_json_jar")
-load("//rule:merge_jij.bzl", "merge_jij")
+load("//blazerod/model:model_info_jar.bzl", "model_info_jar")
+load("//rule/fabric:merge_jij.bzl", "fabric_merge_jij")
 
-fabric_mod_json_jar(
-    name = "fabric_mod_json",
-    src = "src/main/resources/fabric.mod.json",
-    resource_strip_prefix = "blazerod/model/model-bedrock",
+model_info_jar(
+    name = "mod_info_json",
     substitutions = {
-        "${version}": blazerod_version,
+        "${mod_id}": "blazerod-model-bedrock",
+        "${name}": "BlazeRod model bedrock",
+        "${description}": "Bedrock model loading support.",
     },
 )
 
@@ -16,7 +15,7 @@ kt_jvm_library(
     name = "model-bedrock",
     srcs = glob(["src/main/kotlin/**/*.kt"]),
     resource_jars = [
-        ":fabric_mod_json",
+        ":mod_info_json",
         "//blazerod:icon",
     ],
     resources = glob(
@@ -33,7 +32,7 @@ kt_jvm_library(
     ],
 )
 
-merge_jij(
+fabric_merge_jij(
     name = "model-bedrock-merged",
     input = ":model-bedrock",
     visibility = ["//visibility:public"],

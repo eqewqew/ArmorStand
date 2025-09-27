@@ -1,7 +1,7 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("//rule:extract_access_widener.bzl", "extract_access_widener")
 load("//rule:apply_access_widener.bzl", "apply_access_widener")
-load("//rule:merge_jij.bzl", "merge_jij")
+load("//rule/fabric:merge_jij.bzl", "fabric_merge_jij")
 load("//rule:remap_jar.bzl", "remap_jar")
 load("//rule:generate_remap_classpath.bzl", "generate_remap_classpath")
 load("//rule:decompile_jar.bzl", "decompile_jar")
@@ -44,9 +44,7 @@ java_library(
     deps = [
         ":remapped_client_access_widened_named",
         ":remapped_deps",
-        "//blazerod/model/model-base",
-        "//blazerod/model/model-formats",
-        "//blazerod/render:render_unmapped",
+        "//blazerod:blazerod_fabric_without_jij",
         "@maven//:net_fabricmc_fabric_loader",
         "@minecraft//:%s_client_libraries" % game_version,
     ],
@@ -62,7 +60,7 @@ remap_jar(
     to_namespace = "intermediary",
 )
 
-merge_jij(
+fabric_merge_jij(
     name = "ball_block",
     input = ":ball_block_without_jij",
     deps = {
@@ -72,7 +70,7 @@ merge_jij(
         "//blazerod/model/model-pmd": "blazerod-model-formats-pmd:=",
         "//blazerod/model/model-pmx": "blazerod-model-formats-pmx:=",
         "//blazerod/model/model-vmd": "blazerod-model-formats-vmd:=",
-        "//blazerod/render": "blazerod-render:=",
+        "//blazerod/render:render_fabric_merged": "blazerod-render:=",
     },
 )
 
@@ -96,7 +94,7 @@ java_binary(
         ":ball_block_unmapped",
         "//game:remapped_client_named",
         ":remapped_deps",
-        "//blazerod:blazerod_without_jij",
+        "//blazerod:blazerod_fabric_without_jij",
         "@maven//:net_fabricmc_fabric_language_kotlin",
         "@maven//:net_fabricmc_fabric_loader",
         "@maven//:net_fabricmc_sponge_mixin",

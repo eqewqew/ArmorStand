@@ -6,8 +6,8 @@ import top.fifthlight.armorstand.util.ModelLoaders
 import top.fifthlight.blazerod.animation.AnimationItem
 import top.fifthlight.blazerod.animation.AnimationItemInstance
 import top.fifthlight.blazerod.animation.AnimationLoader
-import top.fifthlight.blazerod.model.ModelFileLoaders
-import top.fifthlight.blazerod.model.RenderScene
+import top.fifthlight.blazerod.model.formats.ModelFileLoaders
+import top.fifthlight.blazerod.runtime.RenderScene
 import java.nio.file.Path
 import kotlin.io.path.extension
 import kotlin.io.path.isDirectory
@@ -258,10 +258,6 @@ data object AnimationSetLoader {
             }
         }
 
-        if (idle == null) {
-            return AnimationSet.EMPTY
-        }
-
         // Try embed
         if (animations != null) {
             for (animation in animations) {
@@ -287,6 +283,10 @@ data object AnimationSetLoader {
                     "death", "die", "dead" -> die = animation
                 }
             }
+        }
+
+        if (idle == null) {
+            return AnimationSet.EMPTY
         }
 
         return AnimationSet(

@@ -4,9 +4,9 @@ import com.mojang.blaze3d.buffers.GpuBuffer;
 import com.mojang.blaze3d.buffers.GpuBufferSlice;
 import com.mojang.blaze3d.textures.GpuTextureView;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import top.fifthlight.blazerod.pipeline.ComputePipeline;
 
-import javax.annotation.Nullable;
 import java.util.function.Supplier;
 
 public interface ComputePass extends AutoCloseable {

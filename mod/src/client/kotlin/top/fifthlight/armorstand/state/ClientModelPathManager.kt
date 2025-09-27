@@ -54,7 +54,7 @@ object ClientModelPathManager {
 
     fun getPath(uuid: UUID) = if (uuid == selfUuid) {
         selfPath
-    } else if (ArmorStandClient.debug) {
+    } else if (ArmorStandClient.instance.debug) {
         modelPaths[uuid] ?: selfPath
     } else {
         modelPaths[uuid]

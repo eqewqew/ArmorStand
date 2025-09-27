@@ -14,6 +14,7 @@ import com.mojang.blaze3d.textures.GpuTexture;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.gl.*;
 import net.minecraft.client.texture.GlTextureView;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.opengl.*;
 import org.slf4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -33,7 +34,6 @@ import top.fifthlight.blazerod.extension.internal.gl.ShaderProgramExtInternal;
 import top.fifthlight.blazerod.render.gl.ComputePassImpl;
 import top.fifthlight.blazerod.systems.ComputePass;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.function.Supplier;

@@ -1,6 +1,5 @@
-package top.fifthlight.armorstand.debug
+package top.fifthlight.blazerod.debug
 
-import top.fifthlight.blazerod.debug.ResourceCountTracker
 import java.awt.BorderLayout
 import java.awt.Dimension
 import java.awt.Font
