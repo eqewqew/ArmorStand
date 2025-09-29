@@ -11,12 +11,12 @@ import net.minecraft.util.math.MathHelper
 import top.fifthlight.armorstand.extension.internal.PlayerEntityRenderStateExtInternal
 import top.fifthlight.armorstand.util.toRadian
 import top.fifthlight.armorstand.vmc.VmcMarionetteManager
-import top.fifthlight.blazerod.api.ModelInstance
-import top.fifthlight.blazerod.api.RenderExpression
-import top.fifthlight.blazerod.api.RenderExpressionGroup
-import top.fifthlight.blazerod.api.RenderScene
 import top.fifthlight.blazerod.api.animation.AnimationContextsFactory
 import top.fifthlight.blazerod.api.animation.AnimationItemInstance
+import top.fifthlight.blazerod.api.resource.ModelInstance
+import top.fifthlight.blazerod.api.resource.RenderExpression
+import top.fifthlight.blazerod.api.resource.RenderExpressionGroup
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.Expression
 import top.fifthlight.blazerod.model.HumanoidTag
 import top.fifthlight.blazerod.model.NodeTransform

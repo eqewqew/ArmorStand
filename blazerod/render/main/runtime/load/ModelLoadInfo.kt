@@ -3,8 +3,8 @@ package top.fifthlight.blazerod.runtime.load
 import com.mojang.blaze3d.vertex.VertexFormat
 import kotlinx.coroutines.Deferred
 import net.minecraft.client.texture.NativeImage
-import top.fifthlight.blazerod.api.RenderExpression
-import top.fifthlight.blazerod.api.RenderExpressionGroup
+import top.fifthlight.blazerod.api.resource.RenderExpression
+import top.fifthlight.blazerod.api.resource.RenderExpressionGroup
 import top.fifthlight.blazerod.model.*
 import top.fifthlight.blazerod.render.BlazerodVertexFormats
 import top.fifthlight.blazerod.render.GpuIndexBuffer

@@ -46,7 +46,7 @@ java_library(
         ":remapped_deps",
         "//blazerod/model/model-base",
         "//blazerod/model/model-formats",
-        "//blazerod/render/api",
+        "//blazerod/render/api/resource",
         "//blazerod/render/api/loader",
         "//blazerod/render/api/render",
         "@maven//:net_fabricmc_fabric_loader",

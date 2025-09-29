@@ -3,9 +3,9 @@ package top.fifthlight.blazerod.runtime
 import net.minecraft.client.render.VertexConsumerProvider
 import org.joml.Matrix4f
 import org.joml.Matrix4fc
-import top.fifthlight.blazerod.api.ModelInstance
-import top.fifthlight.blazerod.api.RenderScene
 import top.fifthlight.blazerod.api.refcount.AbstractRefCount
+import top.fifthlight.blazerod.api.resource.ModelInstance
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.NodeTransform
 import top.fifthlight.blazerod.model.NodeTransformView
 import top.fifthlight.blazerod.model.TransformId

@@ -4,12 +4,12 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.block.entity.BlockEntityRendererFactories;
-import top.fifthlight.blazerod.api.ModelInstance;
-import top.fifthlight.blazerod.api.ModelInstanceFactory;
-import top.fifthlight.blazerod.api.RenderScene;
 import top.fifthlight.blazerod.api.loader.ModelLoaderFactory;
 import top.fifthlight.blazerod.api.render.Renderer;
 import top.fifthlight.blazerod.api.render.RendererFactory;
+import top.fifthlight.blazerod.api.resource.ModelInstance;
+import top.fifthlight.blazerod.api.resource.ModelInstanceFactory;
+import top.fifthlight.blazerod.api.resource.RenderScene;
 import top.fifthlight.blazerod.model.TransformId;
 import top.fifthlight.blazerod.model.formats.ModelFileLoaders;
 

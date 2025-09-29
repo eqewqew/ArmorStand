@@ -1,4 +1,4 @@
-package top.fifthlight.blazerod.api
+package top.fifthlight.blazerod.api.resource
 
 import top.fifthlight.blazerod.api.refcount.RefCount
 import top.fifthlight.blazerod.model.Camera

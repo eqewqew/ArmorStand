@@ -17,8 +17,8 @@ import org.joml.Matrix4f
 import org.joml.Matrix4fc
 import org.joml.Vector4f
 import top.fifthlight.blazerod.BlazeRod
-import top.fifthlight.blazerod.api.RenderTask
 import top.fifthlight.blazerod.api.render.Renderer
+import top.fifthlight.blazerod.api.resource.RenderTask
 import top.fifthlight.blazerod.extension.*
 import top.fifthlight.blazerod.model.toVector4f
 import top.fifthlight.blazerod.render.BlazerodVertexFormats

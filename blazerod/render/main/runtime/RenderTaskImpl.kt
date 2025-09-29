@@ -3,7 +3,7 @@ package top.fifthlight.blazerod.runtime
 import org.joml.Matrix4f
 import org.joml.Matrix4fc
 import top.fifthlight.blazerod.BlazeRod
-import top.fifthlight.blazerod.api.RenderTask
+import top.fifthlight.blazerod.api.resource.RenderTask
 import top.fifthlight.blazerod.runtime.data.LocalMatricesBuffer
 import top.fifthlight.blazerod.runtime.data.MorphTargetBuffer
 import top.fifthlight.blazerod.runtime.data.RenderSkinBuffer

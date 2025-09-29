@@ -1,10 +1,10 @@
 package top.fifthlight.blazerod.animation
 
-import top.fifthlight.blazerod.api.ModelInstance
-import top.fifthlight.blazerod.api.RenderScene
 import top.fifthlight.blazerod.api.animation.AnimationItem
 import top.fifthlight.blazerod.api.animation.AnimationItemInstance
 import top.fifthlight.blazerod.api.animation.AnimationItemPendingValues
+import top.fifthlight.blazerod.api.resource.ModelInstance
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.animation.Animation
 import top.fifthlight.blazerod.model.animation.AnimationContext
 import top.fifthlight.blazerod.model.animation.AnimationState

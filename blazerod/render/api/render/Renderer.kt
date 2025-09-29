@@ -1,8 +1,8 @@
 package top.fifthlight.blazerod.api.render
 
 import com.mojang.blaze3d.textures.GpuTextureView
-import top.fifthlight.blazerod.api.RenderScene
-import top.fifthlight.blazerod.api.RenderTask
+import top.fifthlight.blazerod.api.resource.RenderScene
+import top.fifthlight.blazerod.api.resource.RenderTask
 import top.fifthlight.mergetools.api.ExpectFactory
 
 interface Renderer<R : Renderer<R, T>, T : Renderer.Type<R, T>> : AutoCloseable {

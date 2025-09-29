@@ -1,7 +1,7 @@
 package top.fifthlight.blazerod.runtime.resource
 
 import org.joml.*
-import top.fifthlight.blazerod.api.CameraTransform
+import top.fifthlight.blazerod.api.resource.CameraTransform
 import top.fifthlight.blazerod.model.Camera
 
 sealed class CameraTransformImpl : CameraTransform {

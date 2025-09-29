@@ -1,4 +1,4 @@
-package top.fifthlight.blazerod.api
+package top.fifthlight.blazerod.api.resource
 
 import net.minecraft.client.render.VertexConsumerProvider
 import org.joml.Matrix4f

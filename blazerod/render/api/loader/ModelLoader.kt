@@ -1,6 +1,6 @@
 package top.fifthlight.blazerod.api.loader
 
-import top.fifthlight.blazerod.api.RenderScene
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.Model
 import top.fifthlight.mergetools.api.ExpectFactory
 import java.util.concurrent.CompletableFuture

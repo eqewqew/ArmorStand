@@ -1,7 +1,7 @@
 package top.fifthlight.blazerod.runtime.node
 
-import top.fifthlight.blazerod.api.RenderNode
 import top.fifthlight.blazerod.api.refcount.AbstractRefCount
+import top.fifthlight.blazerod.api.resource.RenderNode
 import top.fifthlight.blazerod.model.HumanoidTag
 import top.fifthlight.blazerod.model.NodeId
 import top.fifthlight.blazerod.model.NodeTransformView

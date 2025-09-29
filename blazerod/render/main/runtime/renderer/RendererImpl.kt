@@ -1,11 +1,11 @@
 package top.fifthlight.blazerod.runtime.renderer
 
 import com.mojang.blaze3d.textures.GpuTextureView
-import top.fifthlight.blazerod.api.RenderScene
-import top.fifthlight.blazerod.api.RenderTask
 import top.fifthlight.blazerod.api.render.Renderer
 import top.fifthlight.blazerod.api.render.RendererTypeHolder
 import top.fifthlight.blazerod.api.render.ScheduledRenderer
+import top.fifthlight.blazerod.api.resource.RenderScene
+import top.fifthlight.blazerod.api.resource.RenderTask
 import top.fifthlight.blazerod.runtime.RenderSceneImpl
 import top.fifthlight.blazerod.runtime.RenderTaskImpl
 import top.fifthlight.blazerod.runtime.TaskMap

@@ -3,11 +3,11 @@ package top.fifthlight.armorstand.state
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import top.fifthlight.armorstand.util.ModelLoaders
-import top.fifthlight.blazerod.api.RenderScene
 import top.fifthlight.blazerod.api.animation.AnimationItem
 import top.fifthlight.blazerod.api.animation.AnimationItemFactory
 import top.fifthlight.blazerod.api.animation.AnimationItemInstance
 import top.fifthlight.blazerod.api.animation.AnimationItemInstanceFactory
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.formats.ModelFileLoaders
 import java.nio.file.Path
 import kotlin.io.path.extension

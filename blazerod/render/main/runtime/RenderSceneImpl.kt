@@ -3,10 +3,10 @@ package top.fifthlight.blazerod.runtime
 import it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap
 import net.minecraft.client.render.VertexConsumerProvider
 import org.joml.Matrix4fc
-import top.fifthlight.blazerod.api.RenderExpression
-import top.fifthlight.blazerod.api.RenderExpressionGroup
-import top.fifthlight.blazerod.api.RenderScene
 import top.fifthlight.blazerod.api.refcount.AbstractRefCount
+import top.fifthlight.blazerod.api.resource.RenderExpression
+import top.fifthlight.blazerod.api.resource.RenderExpressionGroup
+import top.fifthlight.blazerod.api.resource.RenderScene
 import top.fifthlight.blazerod.model.Camera
 import top.fifthlight.blazerod.model.HumanoidTag
 import top.fifthlight.blazerod.model.NodeId

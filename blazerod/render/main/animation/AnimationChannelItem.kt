@@ -2,8 +2,8 @@ package top.fifthlight.blazerod.animation
 
 import org.joml.Quaternionf
 import org.joml.Vector3f
-import top.fifthlight.blazerod.api.RenderExpression
-import top.fifthlight.blazerod.api.RenderExpressionGroup
+import top.fifthlight.blazerod.api.resource.RenderExpression
+import top.fifthlight.blazerod.api.resource.RenderExpressionGroup
 import top.fifthlight.blazerod.model.TransformId
 import top.fifthlight.blazerod.model.animation.AnimationChannel
 import top.fifthlight.blazerod.model.animation.AnimationContext

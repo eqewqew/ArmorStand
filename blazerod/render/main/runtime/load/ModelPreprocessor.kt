@@ -4,8 +4,8 @@ import com.mojang.blaze3d.textures.TextureFormat
 import com.mojang.blaze3d.vertex.VertexFormat
 import com.mojang.blaze3d.vertex.VertexFormatElement
 import kotlinx.coroutines.*
-import top.fifthlight.blazerod.api.RenderExpression
-import top.fifthlight.blazerod.api.RenderExpressionGroup
+import top.fifthlight.blazerod.api.resource.RenderExpression
+import top.fifthlight.blazerod.api.resource.RenderExpressionGroup
 import top.fifthlight.blazerod.extension.NativeImageExt
 import top.fifthlight.blazerod.extension.TextureFormatExt
 import top.fifthlight.blazerod.model.*
