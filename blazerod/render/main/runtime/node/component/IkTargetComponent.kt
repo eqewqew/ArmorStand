@@ -197,7 +197,7 @@ class IkTargetComponent(
                 continue
             }
             angle = angle.coerceIn(-limitRadian, limitRadian)
-            val cross = chainIkVec.cross(chainTargetVec, cross).normalize()
+            val cross = chainTargetVec.cross(chainIkVec, cross).normalize()
             val rot = rot.rotationAxis(angle, cross)
 
             val chainRot = instance.getTransformMap(chain.nodeIndex)
