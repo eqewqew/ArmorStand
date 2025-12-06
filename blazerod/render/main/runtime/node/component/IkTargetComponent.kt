@@ -185,7 +185,7 @@ class IkTargetComponent(
             val chainIkPos = ikPos.mulPosition(invChain, chainIkPos)
             val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
-            // Unnormalized vector seems never used then, so directly overwrite them
+            // Use temporary vectors to avoid mutating chainIkPos/chainTargetPos
             val chainIkVec = chainIkPos.normalize(Vector3f())
             val chainTargetVec = chainTargetPos.normalize(Vector3f())
 
@@ -200,29 +200,41 @@ class IkTargetComponent(
             val cross = chainTargetVec.cross(chainIkVec, cross).normalize()
             val rot = rot.rotationAxis(angle, cross)
 
-            val chainRot = instance.getTransformMap(chain.nodeIndex)
+            // --- Begin: construct chainRot and write back IKRotate following Saba logic ---
+            // ikQuat = current IK layer quaternion (equivalent to GetIKRotate())
+            val ikQuat = Quaternionf()
+            instance.getTransformMap(chain.nodeIndex)
                 .getSum(transformId)
-                .getUnnormalizedRotation(chainRot)
-                .mul(rot)
-            if (limit != null) {
-                val chainRotM = chainRotM.rotation(chainRot)
-                val rotXYZ = decompose(chainRotM, chain.prevAngle, rotXYZ)
-                val clampXYZ = rotXYZ.coerceIn(limit.min, limit.max)
-                    .sub(chain.prevAngle).coerceIn(-limitRadian, limitRadian).add(chain.prevAngle)
-                // Don't introduce a temp r
-                chainRotM.rotationXYZ(clampXYZ.x, clampXYZ.y, clampXYZ.z)
-                chain.prevAngle.set(clampXYZ)
+                .getUnnormalizedRotation(ikQuat)
 
-                chainRotM.getUnnormalizedRotation(chainRot)
+            // animQuat = animation/bind rotation (equivalent to AnimateRotate())
+            val animQuat = Quaternionf()
+            instance.getTransformMap(chain.nodeIndex)
+                .getSum(transformId.prev)
+                .getUnnormalizedRotation(animQuat)
+
+            // chainRot = IKRotate * AnimateRotate * rot
+            val chainRotQuat = Quaternionf(ikQuat).mul(animQuat).mul(rot)
+
+            // If axis-limited, decompose, clamp, rebuild chainRotQuat
+            if (limit != null) {
+                val tmpMat = Matrix3f().rotation(chainRotQuat)
+                val tmpRotXYZ = decompose(tmpMat, chain.prevAngle, Vector3f())
+                val clampXYZ = tmpRotXYZ.coerceIn(limit.min, limit.max)
+                    .sub(chain.prevAngle).coerceIn(-limitRadian, limitRadian).add(chain.prevAngle)
+                tmpMat.rotationXYZ(clampXYZ.x, clampXYZ.y, clampXYZ.z)
+                chain.prevAngle.set(clampXYZ)
+                tmpMat.getUnnormalizedRotation(chainRotQuat)
             }
 
-            val prevRotationInv = instance.getTransformMap(chain.nodeIndex)
-                .getSum(transformId.prev)
-                .getUnnormalizedRotation(prevRotationInv).invert()
+            // IKRotate = chainRot * inverse(AnimateRotate)
+            val ikResult = Quaternionf(chainRotQuat).mul(Quaternionf(animQuat).invert())
+
             instance.setTransformDecomposed(chain.nodeIndex, transformId) {
-                rotation.set(chainRot).mul(prevRotationInv)
+                rotation.set(ikResult)
             }
             instance.updateNodeTransform(chain.nodeIndex)
+            // --- End writeback ---
         }
     }
 
@@ -249,9 +261,9 @@ class IkTargetComponent(
         val chainIkPos = ikPos.mulPosition(invChain, chainIkPos)
         val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
-        // Unnormalized vector seems never used then, so directly overwrite them
-        val chainIkVec = chainIkPos.normalize()
-        val chainTargetVec = chainTargetPos.normalize()
+        // Use temporary vectors to avoid mutating chainIkPos/chainTargetPos
+        val chainIkVec = chainIkPos.normalize(Vector3f())
+        val chainTargetVec = chainTargetPos.normalize(Vector3f())
 
         val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
 
@@ -290,11 +302,18 @@ class IkTargetComponent(
         newAngle = newAngle.coerceIn(limitRange)
         chain.planeModeAngle = newAngle
 
-        val prevRotationInv = instance.getTransformMap(chain.nodeIndex)
+        // Use AnimateRotate inverse to compute IKRotate similar to Saba (but matches plane logic)
+        val animQuat = Quaternionf()
+        instance.getTransformMap(chain.nodeIndex)
             .getSum(transformId.prev)
-            .getUnnormalizedRotation(prevRotationInv).invert()
+            .getUnnormalizedRotation(animQuat)
+
+        // For plane mode original saba used rot * inverse(anim); do same here.
+        val rotQuat = Quaternionf().rotationAxis(newAngle, rotateAxis)
+        val ikQuatResult = Quaternionf(rotQuat).mul(Quaternionf(animQuat).invert())
+
         instance.setTransformDecomposed(chain.nodeIndex, transformId) {
-            rotation.rotationAxis(newAngle, rotateAxis).mul(prevRotationInv)
+            rotation.set(ikQuatResult)
         }
         instance.updateNodeTransform(chain.nodeIndex)
     }
