@@ -186,8 +186,8 @@ class IkTargetComponent(
             val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
             // Unnormalized vector seems never used then, so directly overwrite them
-            val chainIkVec = chainIkPos.normalize()
-            val chainTargetVec = chainTargetPos.normalize()
+            val chainIkVec = chainIkPos.normalize(Vector3f())
+            val chainTargetVec = chainTargetPos.normalize(Vector3f())
 
             val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
 
@@ -197,7 +197,7 @@ class IkTargetComponent(
                 continue
             }
             angle = angle.coerceIn(-limitRadian, limitRadian)
-            val cross = chainTargetVec.cross(chainIkVec, cross).normalize()
+            val cross = chainIkVec.cross(chainTargetVec, cross).normalize()
             val rot = rot.rotationAxis(angle, cross)
 
             val chainRot = instance.getTransformMap(chain.nodeIndex)
@@ -314,7 +314,6 @@ class IkTargetComponent(
                     return
                 }
                 for (chain in chains) {
-                    chain.prevAngle.set(0f)
                     instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                         rotation.identity()
                     }
