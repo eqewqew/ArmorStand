@@ -11,16 +11,6 @@ import top.fifthlight.blazerod.runtime.node.getTransformMap
 import top.fifthlight.blazerod.runtime.node.getWorldTransform
 import kotlin.math.*
 
-/**
- * Stable IK implementation based on your original system but hardened:
- * - safe normalization / cross product (avoid NaN)
- * - smoothing (slerp) option to reduce jitter
- * - robust plane (single-axis) solver
- * - Euler decomposition/limit only when needed
- * - preserve save/rollback logic
- *
- * Replace your original IkTargetComponent with this file (or merge the logic).
- */
 class IkTargetComponent(
     val ikIndex: Int,
     val limitRadian: Float,
@@ -67,16 +57,11 @@ class IkTargetComponent(
         var planeModeAngle: Float = 0f
     }
 
-    // ---- helpers for Euler handling (unchanged logic adapted) ----
+    // ---------- Euler helpers ----------
     private fun normalizeAngle(angle: Float): Float {
         var ret = angle
-        while (ret >= FLOAT_TWO_PI) {
-            ret -= FLOAT_TWO_PI
-        }
-        while (ret < 0) {
-            ret += FLOAT_TWO_PI
-        }
-
+        while (ret >= FLOAT_TWO_PI) ret -= FLOAT_TWO_PI
+        while (ret < 0) ret += FLOAT_TWO_PI
         return ret
     }
 
@@ -94,12 +79,10 @@ class IkTargetComponent(
         val e = 1e-6f
         if ((1f - abs(sy)) < e) {
             r.y = asin(sy)
-            // Find the closest angle to 180 degrees
             val sx = sin(before.x())
             val sz = sin(before.z())
 
             if (abs(sx) < abs(sz)) {
-                // X is closer to 0 or 180
                 val cx = cos(before.x())
                 if (cx > 0) {
                     r.x = 0f
@@ -147,53 +130,48 @@ class IkTargetComponent(
         top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> z()
     }
 
-    // ---- safe math utilities ----
+    // ---------- Vector3f extensions ----------
+    private fun Vector3f.coerceIn(min: Vector3fc, max: Vector3fc): Vector3f = set(
+        x.coerceIn(min.x(), max.x()),
+        y.coerceIn(min.y(), max.y()),
+        z.coerceIn(min.z(), max.z()),
+    )
+
+    private fun Vector3f.coerceIn(min: Float, max: Float): Vector3f = set(
+        x.coerceIn(min, max),
+        y.coerceIn(min, max),
+        z.coerceIn(min, max),
+    )
+
+    // ---------- safe math utils ----------
     private fun safeNormalizeInPlace(v: Vector3f, fallback: Vector3f = Vector3f(0f, 1f, 0f), eps2: Float = 1e-8f): Vector3f {
         val l2 = v.lengthSquared()
-        return if (l2 < eps2) {
-            v.set(fallback)
-        } else {
-            v.mul(1f / sqrt(l2))
-        }
+        return if (l2 < eps2) v.set(fallback) else v.mul(1f / sqrt(l2))
     }
 
     private fun safeNormalize(v: Vector3f, out: Vector3f, fallback: Vector3f = Vector3f(0f, 1f, 0f), eps2: Float = 1e-8f): Vector3f {
         val l2 = v.lengthSquared()
-        return if (l2 < eps2) {
-            out.set(fallback)
-        } else {
-            out.set(v).mul(1f / sqrt(l2))
-        }
+        return if (l2 < eps2) out.set(fallback) else out.set(v).mul(1f / sqrt(l2))
     }
 
-    private fun safeCross(a: Vector3f, b: Vector3f, out: Vector3f, fallback: Vector3f = Vector3f(0f, 1f, 0f), eps2: Float = 1e-8f): Vector3f {
+    private fun safeCross(a: Vector3f, b: Vector3f, out: Vector3f, eps2: Float = 1e-8f): Vector3f {
         a.cross(b, out)
         val l2 = out.lengthSquared()
         if (l2 < eps2) {
-            // vectors nearly parallel -> pick a stable axis
-            // choose a fallback perpendicular to 'a' if possible
-            val ax = abs(a.x)
-            val ay = abs(a.y)
-            val az = abs(a.z)
-            if (ax < ay && ax < az) {
-                // a is closest to X=0 plane, cross with X axis
-                out.set(1f, 0f, 0f).cross(a, out).normalize()
-            } else if (ay < az) {
-                out.set(0f, 1f, 0f).cross(a, out).normalize()
-            } else {
-                out.set(0f, 0f, 1f).cross(a, out).normalize()
-            }
-        } else {
-            out.mul(1f / sqrt(l2))
-        }
+            // pick fallback axis perpendicular to 'a'
+            val ax = abs(a.x); val ay = abs(a.y); val az = abs(a.z)
+            if (ax < ay && ax < az) out.set(1f, 0f, 0f).cross(a, out).normalize()
+            else if (ay < az) out.set(0f, 1f, 0f).cross(a, out).normalize()
+            else out.set(0f, 0f, 1f).cross(a, out).normalize()
+        } else out.mul(1f / sqrt(l2))
         return out
     }
 
-    // optionally smooth rotation application to prevent jitter
+    // smoothing toggle
     private val applySmoothing = true
-    private val smoothingFactor = 0.85f // 0..1 ; larger means less smoothing (closer to new rotation)
+    private val smoothingFactor = 0.85f
 
-    // ---- reusable temporaries to avoid allocations ----
+    // temporaries (reuse to avoid alloc)
     private val targetPos = Vector3f()
     private val ikPos = Vector3f()
     private val invChain = Matrix4f()
@@ -209,108 +187,81 @@ class IkTargetComponent(
     private val tmpSaveRot = Quaternionf()
     private val tmpQuatSlerp = Quaternionf()
 
-    // ---- core solver ----
+    // ---------- core solver ----------
     private fun solveCore(
         node: RenderNodeImpl,
         instance: ModelInstanceImpl,
         iterateCount: Int,
     ) {
-        // get effector world pos once
+        // effector world pos
         instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
 
-        // traverse in order given by 'chains'. For CCD effect typical list should be from root->end or end->root depending on how you built list.
-        // This implementation assumes chains are ordered from root->effector; earlier code used chains.last() for update -> preserve that behavior.
         for (chain in chains) {
-            if (chain.nodeIndex == node.nodeIndex) {
-                // target node equals chain node -> skip
-                continue
-            }
+            if (chain.nodeIndex == node.nodeIndex) continue
 
             val limit = chain.limit
             val axis = limit?.singleAxis
             if (axis != null) {
-                // single-axis specialized solver
                 solvePlane(node, instance, iterateCount, chain, limit, axis)
                 continue
             }
 
-            // world target pos and chain inverse transform
+            // get target and inv chain transform
             instance.getWorldTransform(node).getTranslation(targetPos)
             instance.getWorldTransform(chain.nodeIndex).invert(invChain)
 
-            // transform ik & target into chain local space
+            // transform into chain local
             invChain.transformPosition(ikPos, chainIkPos)
             invChain.transformPosition(targetPos, chainTargetPos)
 
-            // safe normalize (avoid NaN when positions are near zero)
+            // safety guards
             val ikLen2 = chainIkPos.lengthSquared()
             val tgtLen2 = chainTargetPos.lengthSquared()
+            if (ikLen2 < 1e-8f || tgtLen2 < 1e-8f) continue
 
-            // If both positions are nearly zero we cannot compute a meaningful rotation
-            if (ikLen2 < 1e-8f || tgtLen2 < 1e-8f) {
-                // skip this chain to avoid NaN propagation
-                continue
-            }
-
-            // compute normalized direction vectors in chain local
-            safeNormalize(chainIkPos, chainIkPos)     // normalized in-place
+            // normalize safely
+            safeNormalize(chainIkPos, chainIkPos)
             safeNormalize(chainTargetPos, chainTargetPos)
 
-            // dot -> angle
             var dot = chainTargetPos.dot(chainIkPos).coerceIn(-1f, 1f)
             var angle = acos(dot)
-
-            // small-angle skip -> no update
-            if (angle < 1e-6f) {
-                continue
-            }
-
-            // clamp single-step angle
+            if (angle < 1e-6f) continue
             angle = angle.coerceIn(-limitRadian, limitRadian)
 
-            // axis: robust cross (avoid zero axis)
+            // robust cross -> axis
             safeCross(chainTargetPos, chainIkPos, tmpAxis)
 
-            // create rotation quaternion
+            // rotation to move ik vector towards target vector
             tmpRot.rotationAxis(angle, tmpAxis)
 
-            // accumulate with current 'sum' rotation for this transformId
-            val currentSumRot = instance.getTransformMap(chain.nodeIndex)
+            // accumulate on current sum rotation for this transformId
+            instance.getTransformMap(chain.nodeIndex)
                 .getSum(transformId)
                 .getUnnormalizedRotation(tmpChainRot)
+            tmpChainRot.mul(tmpRot) // tmpChainRot = currentSum * tmpRot
 
-            tmpChainRot.mul(tmpRot) // chainRot = currentSumRot * tmpRot
-
-            // If joint has Euler limits, decompose and clamp
+            // euler-limits (if any) -> decompose and clamp
             if (limit != null) {
                 tmpChainRotM.rotation(tmpChainRot)
                 decompose(tmpChainRotM, chain.prevAngle, tmpRotXYZ)
-                // clamp per-axis to limits
                 val clampXYZ = tmpRotXYZ.coerceIn(limit.min, limit.max)
                     .sub(chain.prevAngle).coerceIn(-limitRadian, limitRadian).add(chain.prevAngle)
                 tmpChainRotM.rotationXYZ(clampXYZ.x, clampXYZ.y, clampXYZ.z)
                 chain.prevAngle.set(clampXYZ)
-                tmpChainRot = Quaternionf().setFromNormalized(tmpChainRotM)
+                tmpChainRotM.getUnnormalizedRotation(tmpChainRot)
             }
 
-            // compute rotation to write relative to previous transform (prev slot)
+            // desired local = tmpChainRot * inv(prev)
             instance.getTransformMap(chain.nodeIndex)
                 .getSum(transformId.prev)
                 .getUnnormalizedRotation(prevRotationInv).invert()
 
-            // desired local delta rotation to store
             val desiredLocal = Quaternionf(tmpChainRot).mul(prevRotationInv)
 
-            // smoothing: slerp between old stored rotation and new desired rotation to avoid frame jitter
+            // smoothing (slerp) between existing and desired to reduce frame jitter
             if (applySmoothing) {
-                // get existing rotation stored in transformId (if any)
                 val existing = instance.getTransformMap(chain.nodeIndex).get(transformId)
-                if (existing != null) {
-                    existing.getRotation(tmpSaveRot)
-                } else {
-                    tmpSaveRot.identity()
-                }
-                // slerp tmpSaveRot -> desiredLocal with factor smoothingFactor
+                if (existing != null) existing.getRotation(tmpSaveRot) else tmpSaveRot.identity()
                 tmpQuatSlerp.set(tmpSaveRot).slerp(desiredLocal, smoothingFactor)
                 instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                     rotation.set(tmpQuatSlerp)
@@ -321,12 +272,12 @@ class IkTargetComponent(
                 }
             }
 
-            // update node transforms so next chain sees updated global
+            // update this node so next chain sees new world transform
             instance.updateNodeTransform(chain.nodeIndex)
         }
     }
 
-    // ---- plane solver: single axis solver (X/Y/Z) ----
+    // ---------- plane (single-axis) solver ----------
     private val rot1 = Quaternionf()
     private val resultVec1 = Vector3f()
     private val rot2 = Quaternionf()
@@ -348,7 +299,6 @@ class IkTargetComponent(
         invChain.transformPosition(ikPos, chainIkPos)
         invChain.transformPosition(targetPos, chainTargetPos)
 
-        // safe normalization
         val ikLen2 = chainIkPos.lengthSquared()
         val tgtLen2 = chainTargetPos.lengthSquared()
         if (ikLen2 < 1e-8f || tgtLen2 < 1e-8f) return
@@ -359,7 +309,6 @@ class IkTargetComponent(
         var dot = chainTargetPos.dot(chainIkPos).coerceIn(-1f, 1f)
         val baseAngle = acos(dot).coerceIn(-limitRadian, limitRadian)
 
-        // try rotating target around allowed axis in both directions and pick the better
         rot1.rotationAxis(baseAngle, rotateAxis)
         chainTargetPos.rotate(rot1, resultVec1)
         val dot1 = resultVec1.dot(chainIkPos)
@@ -371,17 +320,13 @@ class IkTargetComponent(
         var newAngle = chain.planeModeAngle
         if (dot1 > dot2) newAngle += baseAngle else newAngle -= baseAngle
 
-        // initial correction on first iteration (try to pick sign that fits range)
         val limitRange = limits.min.getAxis(axis) .. limits.max.getAxis(axis)
         if (iterateCount == 0) {
             if (newAngle !in limitRange) {
-                if (-newAngle in limitRange) {
-                    newAngle = -newAngle
-                } else {
+                if (-newAngle in limitRange) newAngle = -newAngle
+                else {
                     val halfRad = (limitRange.start + limitRange.endInclusive) * 0.5f
-                    if (abs(halfRad - newAngle) > abs(halfRad + newAngle)) {
-                        newAngle = -newAngle
-                    }
+                    if (abs(halfRad - newAngle) > abs(halfRad + newAngle)) newAngle = -newAngle
                 }
             }
         }
@@ -389,7 +334,6 @@ class IkTargetComponent(
         newAngle = newAngle.coerceIn(limitRange.start, limitRange.endInclusive)
         chain.planeModeAngle = newAngle
 
-        // write rotation (apply prev invert) with smoothing
         instance.getTransformMap(chain.nodeIndex)
             .getSum(transformId.prev)
             .getUnnormalizedRotation(prevRotationInv).invert()
@@ -412,21 +356,19 @@ class IkTargetComponent(
         instance.updateNodeTransform(chain.nodeIndex)
     }
 
+    // ---------- update entry ----------
     override fun update(
         phase: UpdatePhase,
         node: RenderNodeImpl,
         instance: ModelInstanceImpl,
     ) {
         val enabled = instance.modelData.ikEnabled[ikIndex]
-        if (!enabled) {
-            return
-        }
+        if (!enabled) return
+
         when (phase) {
             is UpdatePhase.IkUpdate -> {
-                if (chains.isEmpty()) {
-                    return
-                }
-                // initialize per-iteration state
+                if (chains.isEmpty()) return
+
                 for (chain in chains) {
                     chain.prevAngle.set(0f)
                     instance.setTransformDecomposed(chain.nodeIndex, transformId) {
@@ -435,7 +377,6 @@ class IkTargetComponent(
                     chain.planeModeAngle = 0f
                 }
 
-                // ensure transforms up to last chain are up-to-date
                 instance.updateNodeTransform(chains.last().nodeIndex)
 
                 var maxDist = Float.MAX_VALUE
@@ -447,7 +388,7 @@ class IkTargetComponent(
                     val dist = targetPos.distanceSquared(ikPos)
 
                     if (dist.isNaN()) {
-                        // Numerical trouble, rollback and break
+                        // rollback on numerical trouble
                         for (chain in chains) {
                             instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                                 rotation.set(chain.saveIKRot)
@@ -459,17 +400,11 @@ class IkTargetComponent(
 
                     if (dist < maxDist) {
                         maxDist = dist
-                        // save rotations (avoid saving NaN)
                         for (chain in chains) {
                             val matrix = instance.getTransformMap(chain.nodeIndex).get(transformId)
-                            if (matrix != null) {
-                                matrix.getRotation(chain.saveIKRot)
-                            } else {
-                                chain.saveIKRot.identity()
-                            }
+                            if (matrix != null) matrix.getRotation(chain.saveIKRot) else chain.saveIKRot.identity()
                         }
                     } else {
-                        // no improvement: rollback to saved best and stop
                         for (chain in chains) {
                             instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                                 rotation.set(chain.saveIKRot)
@@ -522,3 +457,4 @@ class IkTargetComponent(
         }
     }
 }
+
