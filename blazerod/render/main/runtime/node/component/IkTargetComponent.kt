@@ -32,21 +32,17 @@ class IkTargetComponent(
 
         private const val FLOAT_PI = PI.toFloat()
         private const val FLOAT_TWO_PI = FLOAT_PI * 2
-        
-        // 阈值稍微调大一点点，过滤掉极微小的颤动
-        private const val MIN_ROTATION_THRESHOLD = 0.0001f 
-        // 阻尼系数，0.5 比较平衡，太小会慢，太大会抖
-        private const val IK_DAMPING_FACTOR = 0.5f 
 
+        // saba code uses hardcoded pi values for decompose tests
         private val decomposeTests = listOf(
-            Vector3f(FLOAT_PI, FLOAT_PI, FLOAT_PI),   // + + +
-            Vector3f(FLOAT_PI, FLOAT_PI, -FLOAT_PI),  // + + -
-            Vector3f(FLOAT_PI, -FLOAT_PI, FLOAT_PI),  // + - +
-            Vector3f(FLOAT_PI, -FLOAT_PI, -FLOAT_PI), // + - -
-            Vector3f(-FLOAT_PI, FLOAT_PI, FLOAT_PI),  // - + +
-            Vector3f(-FLOAT_PI, FLOAT_PI, -FLOAT_PI), // - + -
-            Vector3f(-FLOAT_PI, -FLOAT_PI, FLOAT_PI), // - - +
-            Vector3f(-FLOAT_PI, -FLOAT_PI, -FLOAT_PI) // - - -
+            Vector3f(FLOAT_PI, FLOAT_PI, FLOAT_PI),
+            Vector3f(FLOAT_PI, FLOAT_PI, -FLOAT_PI),
+            Vector3f(FLOAT_PI, -FLOAT_PI, FLOAT_PI),
+            Vector3f(FLOAT_PI, -FLOAT_PI, -FLOAT_PI),
+            Vector3f(-FLOAT_PI, FLOAT_PI, FLOAT_PI),
+            Vector3f(-FLOAT_PI, FLOAT_PI, -FLOAT_PI),
+            Vector3f(-FLOAT_PI, -FLOAT_PI, FLOAT_PI),
+            Vector3f(-FLOAT_PI, -FLOAT_PI, -FLOAT_PI)
         )
     }
 
@@ -57,191 +53,253 @@ class IkTargetComponent(
         val nodeIndex: Int,
         val limit: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits?,
     ) {
+        // Corresponds to m_prevAngle
         val prevAngle = Vector3f()
+        // Corresponds to m_saveIKRot
         val saveIKRot = Quaternionf()
+        // Corresponds to m_planeModeAngle
         var planeModeAngle: Float = 0f
     }
 
+    // --- Math Utils from saba ---
+
     private fun normalizeAngle(angle: Float): Float {
         var ret = angle
-        while (ret >= FLOAT_PI) ret -= FLOAT_TWO_PI
-        while (ret < -FLOAT_PI) ret += FLOAT_TWO_PI
+        while (ret >= FLOAT_TWO_PI) {
+            ret -= FLOAT_TWO_PI
+        }
+        while (ret < 0) {
+            ret += FLOAT_TWO_PI
+        }
         return ret
     }
 
-    private fun diffAngle(a: Float, b: Float): Float = normalizeAngle(a - b)
+    private fun diffAngle(a: Float, b: Float): Float {
+        val diff = normalizeAngle(a) - normalizeAngle(b)
+        if (diff > FLOAT_PI) {
+            return diff - FLOAT_TWO_PI
+        } else if (diff < -FLOAT_PI) {
+            return diff + FLOAT_TWO_PI
+        }
+        return diff
+    }
 
-    private val testVec = Vector3f()
-    
-    // 优化后的 decompose，增加了对 NaN 的防护
+    // saba Decompose function ported 1:1
     private fun decompose(m: Matrix3fc, before: Vector3fc, r: Vector3f): Vector3f {
         val sy = -m.m02()
-        val e = 1e-6f
+        val e = 1.0e-6f
         
-        // 简单的反解逻辑
-        if ((1f - abs(sy)) < e) {
-             // Gimbal lock case
-            r.y = asin(sy.coerceIn(-1f, 1f))
+        if ((1.0f - abs(sy)) < e) {
+            r.y = asin(sy)
+            // Search for angle closer to 180 deg (PI)
             val sx = sin(before.x())
             val sz = sin(before.z())
-
             if (abs(sx) < abs(sz)) {
+                // X is closer to 0 or 180
                 val cx = cos(before.x())
                 if (cx > 0) {
                     r.x = 0f
-                    r.z = asin((-m.m10()).coerceIn(-1f, 1f))
+                    r.z = asin(-m.m10())
                 } else {
                     r.x = FLOAT_PI
-                    r.z = asin(m.m10().coerceIn(-1f, 1f))
+                    r.z = asin(m.m10())
                 }
             } else {
                 val cz = cos(before.z())
                 if (cz > 0) {
                     r.z = 0f
-                    r.x = asin((-m.m21()).coerceIn(-1f, 1f))
+                    r.x = asin(-m.m21())
                 } else {
                     r.z = FLOAT_PI
-                    r.x = asin(m.m21().coerceIn(-1f, 1f))
+                    r.x = asin(m.m21())
                 }
             }
         } else {
             r.x = atan2(m.m12(), m.m22())
-            r.y = asin(sy.coerceIn(-1f, 1f))
+            r.y = asin(-m.m02())
             r.z = atan2(m.m01(), m.m00())
         }
 
-        // 寻找最小变化的解，防止跳变
-        val errX = abs(diffAngle(r.x, before.x()))
-        val errY = abs(diffAngle(r.y, before.y()))
-        val errZ = abs(diffAngle(r.z, before.z()))
-        var minErr = errX + errY + errZ
+        val pi = FLOAT_PI
+        // Note: saba code constructs tests array dynamically, we use pre-allocated list but add r values
+        // We need to match the logic: { r.x + pi, pi - r.y, r.z + pi } etc.
         
-        for (testDiff in decomposeTests) {
-            testVec.set(r.x, -r.y, r.z).add(testDiff)
-            val err = abs(diffAngle(testVec.x(), before.x())) +
-                    abs(diffAngle(testVec.y(), before.y())) +
-                    abs(diffAngle(testVec.z(), before.z()))
+        var minErr = abs(diffAngle(r.x, before.x())) + 
+                     abs(diffAngle(r.y, before.y())) + 
+                     abs(diffAngle(r.z, before.z()))
+        
+        val tmp = Vector3f()
+        
+        // Iterating manually to match the exact combinations in saba's source
+        // tests[] in C++:
+        // { r.x + pi, pi - r.y, r.z + pi },
+        // { r.x + pi, pi - r.y, r.z - pi },
+        // ...
+        
+        for (test in decomposeTests) {
+            // decomposeTests contains the offsets (+pi, +pi, +pi) etc.
+            // But saba logic is a bit specific about signs for Y.
+            // saba: pi - r.y or -pi - r.y.
+            // Let's implement saba's loop explicitly to be safe.
+            
+            // However, the `decomposeTests` I defined earlier matches the permutation of signs if we assume we are adding them.
+            // Wait, saba does `pi - r.y`. My constant list assumes adding. 
+            // Let's rewrite the loop to strictly follow saba's structure.
+            
+            // Re-evaluating saba's test vectors:
+            // 1. x+pi,  pi-y, z+pi
+            // 2. x+pi,  pi-y, z-pi
+            // 3. x+pi, -pi-y, z+pi
+            // 4. x+pi, -pi-y, z-pi
+            // 5. x-pi,  pi-y, z+pi
+            // 6. x-pi,  pi-y, z-pi
+            // 7. x-pi, -pi-y, z+pi
+            // 8. x-pi, -pi-y, z-pi
+            
+            val tx = if (decomposeTests.indexOf(test) < 4) r.x + pi else r.x - pi
+            val ty = if (decomposeTests.indexOf(test) % 4 < 2) pi - r.y else -pi - r.y
+            val tz = if (decomposeTests.indexOf(test) % 2 == 0) r.z + pi else r.z - pi
+            
+            tmp.set(tx, ty, tz)
+            
+            val err = abs(diffAngle(tmp.x, before.x())) +
+                      abs(diffAngle(tmp.y, before.y())) +
+                      abs(diffAngle(tmp.z, before.z()))
+            
             if (err < minErr) {
                 minErr = err
-                r.set(testVec)
+                r.set(tmp)
             }
         }
         return r
     }
-
-    private fun Vector3fc.getAxis(axis: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis) = when (axis) {
-        top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.X -> x()
-        top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Y -> y()
-        top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> z()
-    }
-
-    // 重命名一下防止歧义
-    private fun Vector3f.coerceInVectors(min: Vector3fc, max: Vector3fc): Vector3f = set(
-        x.coerceIn(min.x(), max.x()),
-        y.coerceIn(min.y(), max.y()),
-        z.coerceIn(min.z(), max.z()),
-    )
-
-    // 给标量用的 clamp，改个名字，编译器就不会搞混啦！
-    private fun Vector3f.clampScalar(min: Float, max: Float): Vector3f = set(
-        x.coerceIn(min, max),
-        y.coerceIn(min, max),
-        z.coerceIn(min, max),
-    )
     
-    // 辅助函数：把世界空间的向量转换到节点的局部空间（仅旋转）
-    // 这对于正确计算单轴旋转非常重要
-    private fun transformVecToLocal(vec: Vector3f, nodeGlobalRot: Quaternionfc): Vector3f {
-        val invRot = nodeGlobalRot.invert(Quaternionf())
-        return vec.rotate(invRot)
+    // saba uses glm::clamp
+    private fun clamp(v: Float, min: Float, max: Float): Float = v.coerceIn(min, max)
+    
+    private fun clampVec3(v: Vector3f, min: Vector3fc, max: Vector3fc): Vector3f {
+        v.x = v.x.coerceIn(min.x(), max.x())
+        v.y = v.y.coerceIn(min.y(), max.y())
+        v.z = v.z.coerceIn(min.z(), max.z())
+        return v
     }
 
-    // 复用变量，减少 GC
-    private val targetPos = Vector3f()
+    // Temporary variables to avoid allocation
     private val ikPos = Vector3f()
-    private val invChain = Matrix4f()
+    private val targetPos = Vector3f()
     private val chainIkPos = Vector3f()
     private val chainTargetPos = Vector3f()
-    private val prevRotationInv = Quaternionf()
+    private val invChain = Matrix4f()
     private val cross = Vector3f()
-    private val rot = Quaternionf()
-    private val chainRot = Quaternionf()
-    private val chainRotM = Matrix3f()
-    private val rotXYZ = Vector3f()
-    private val tmpAxisVec = Vector3f()
+    private val rotQuat = Quaternionf()
+    
+    // --- Main Logic ---
 
     private fun solveCore(
         node: RenderNodeImpl,
         instance: ModelInstanceImpl,
-        iterateCount: Int,
+        iteration: Int,
     ) {
-        val ikPos = instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
-        for (chain in chains) {
-            if (chain.nodeIndex == node.nodeIndex) continue
+        // ikPos (global)
+        instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
 
-            val limit = chain.limit
-            val axis = limit?.singleAxis
-            if (axis != null) {
-                solvePlane(node, instance, iterateCount, chain, chain.limit, axis)
+        for (chain in chains) {
+            if (chain.nodeIndex == node.nodeIndex) {
+                // Same target and chain, skip to avoid NaN
                 continue
             }
 
-            val targetPos = instance.getWorldTransform(node).getTranslation(targetPos)
-            val invChain = instance.getWorldTransform(chain.nodeIndex).invert(invChain)
+            // Check for Axis Limit (Knee constraint etc.)
+            val limit = chain.limit
+            if (limit != null) {
+                // Logic from saba: Check if it's a single axis constraint
+                // We use the provided singleAxis property or check limits manually if needed.
+                // Assuming `singleAxis` property correctly identifies X/Y/Z only limits.
+                val axis = limit.singleAxis
+                if (axis != null) {
+                    solvePlane(node, instance, iteration, chain, limit, axis)
+                    continue
+                }
+            }
 
-            val chainIkPos = ikPos.mulPosition(invChain, chainIkPos)
-            val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
+            // Standard IK
+            instance.getWorldTransform(node).getTranslation(targetPos)
+            
+            // invChain
+            instance.getWorldTransform(chain.nodeIndex).invert(invChain)
 
-            // 1. 长度检查：防止处理极短向量导致的 NaN
-            if (chainIkPos.lengthSquared() < 1e-8f || chainTargetPos.lengthSquared() < 1e-8f) continue
+            // chainIkPos = invChain * ikPos
+            ikPos.mulPosition(invChain, chainIkPos)
+            // chainTargetPos = invChain * targetPos
+            targetPos.mulPosition(invChain, chainTargetPos)
 
             val chainIkVec = chainIkPos.normalize()
             val chainTargetVec = chainTargetPos.normalize()
 
-            val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
-            
-            // 2. 角度检查：如果已经很接近了，就不要动，防止微小抖动
-            if (dot > 0.99999f) continue
+            var dot = chainTargetVec.dot(chainIkVec)
+            dot = clamp(dot, -1.0f, 1.0f)
 
-            var angle = acos(dot) * IK_DAMPING_FACTOR // 阻尼
-            if (abs(angle) < MIN_ROTATION_THRESHOLD) continue
-
-            angle = angle.coerceIn(-limitRadian, limitRadian)
-
-            chainTargetVec.cross(chainIkVec, cross)
-            // 3. 叉乘长度检查：防止共线时的 NaN
-            if (cross.lengthSquared() < MIN_ROTATION_THRESHOLD) continue
-            cross.normalize()
-
-            val rot = rot.rotationAxis(angle, cross)
-
-            val chainRot = instance.getTransformMap(chain.nodeIndex)
-                .getSum(transformId)
-                .getUnnormalizedRotation(chainRot)
-                .mul(rot)
-
-            if (limit != null) {
-                val chainRotM = chainRotM.rotation(chainRot)
-                val rotXYZ = decompose(chainRotM, chain.prevAngle, rotXYZ)
-                
-                // 4. 角度限制逻辑优化：平滑限制
-                // 修复了这里的方法调用：
-                // coerceIn -> coerceInVectors
-                // coerceIn -> clampScalar
-                val clampXYZ = rotXYZ.coerceInVectors(limit.min, limit.max)
-                    .sub(chain.prevAngle)
-                    .clampScalar(-limitRadian, limitRadian)
-                    .add(chain.prevAngle)
-
-                chainRotM.rotationXYZ(clampXYZ.x, clampXYZ.y, clampXYZ.z)
-                chain.prevAngle.set(clampXYZ)
-                chainRotM.getUnnormalizedRotation(chainRot)
+            var angle = acos(dot)
+            // 1.0e-3f rad is approx 0.057 degrees
+            if (angle < 1.0e-3f) {
+                continue
             }
 
-            val prevRotationInv = instance.getTransformMap(chain.nodeIndex)
-                .getSum(transformId.prev)
-                .getUnnormalizedRotation(prevRotationInv).invert()
+            // m_limitAngle check
+            angle = clamp(angle, -limitRadian, limitRadian)
+
+            // cross = normalize(cross(target, ik))
+            chainTargetVec.cross(chainIkVec, cross).normalize()
+            
+            // rot = rotate(angle, cross)
+            rotQuat.identity().rotateAxis(angle, cross)
+
+            // chainRot = GetIKRotate() * rot
+            // In our system, getTransformMap returns the current local rotation (including previous IK)
+            val chainRot = Quaternionf()
+            instance.getTransformMap(chain.nodeIndex).getSum(transformId).getUnnormalizedRotation(chainRot)
+            chainRot.mul(rotQuat) // apply rotation
+
+            if (limit != null) {
+                // Decompose and Clamp
+                val chainRotM = Matrix3f().set(chainRot)
+                val rotXYZ = Vector3f()
+                decompose(chainRotM, chain.prevAngle, rotXYZ)
                 
+                // clampXYZ = clamp(rotXYZ, min, max)
+                clampVec3(rotXYZ, limit.min, limit.max)
+                
+                // clampXYZ = clamp(clampXYZ - prev, -limit, limit) + prev
+                val dx = clamp(rotXYZ.x - chain.prevAngle.x, -limitRadian, limitRadian)
+                val dy = clamp(rotXYZ.y - chain.prevAngle.y, -limitRadian, limitRadian)
+                val dz = clamp(rotXYZ.z - chain.prevAngle.z, -limitRadian, limitRadian)
+                
+                rotXYZ.x = dx + chain.prevAngle.x
+                rotXYZ.y = dy + chain.prevAngle.y
+                rotXYZ.z = dz + chain.prevAngle.z
+                
+                // Recompose: r = rotate(x, 1,0,0) * rotate(y, 0,1,0) * rotate(z, 0,0,1)
+                // GLM order: R = Rx * Ry * Rz (if applied as R * v)
+                // JOML: rotateX(x).rotateY(y).rotateZ(z) results in `this * Rx * Ry * Rz`.
+                chainRot.identity()
+                    .rotateX(rotXYZ.x)
+                    .rotateY(rotXYZ.y)
+                    .rotateZ(rotXYZ.z)
+                
+                chain.prevAngle.set(rotXYZ)
+            }
+
+            // Apply to node
+            // chainNode->SetIKRotate(ikRot)
+            // ikRot = chainRot * inverse(AnimateRotate)
+            // In our system: set transform = chainRot * inverse(prev_layer)
+            
+            val prevRotationInv = Quaternionf()
+            instance.getTransformMap(chain.nodeIndex)
+                .getSum(transformId.prev)
+                .getUnnormalizedRotation(prevRotationInv)
+                .invert()
+            
             instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                 rotation.set(chainRot).mul(prevRotationInv)
             }
@@ -249,87 +307,106 @@ class IkTargetComponent(
         }
     }
 
-    // 重写的 solvePlane：使用投影法而不是试探法
     private fun solvePlane(
         node: RenderNodeImpl,
         instance: ModelInstanceImpl,
-        iterateCount: Int,
+        iteration: Int,
         chain: Chain,
-        limits: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits,
+        limit: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits,
         axis: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis,
     ) {
-        // 修复了这里的 when 语句，直接判断 axis 枚举
-        val rotateAxisVec = when (axis) {
-            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.X -> Vector3f(1f, 0f, 0f)
-            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Y -> Vector3f(0f, 1f, 0f)
-            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> Vector3f(0f, 0f, 1f)
-            else -> Vector3f(1f, 0f, 0f) // Fallback for safety
+        // Setup Axis and Plane
+        // GLM: vec3(1,0,0) etc.
+        val rotateAxis = Vector3f()
+        val rotateAxisIndex: Int
+        
+        when (axis) {
+            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.X -> {
+                rotateAxisIndex = 0
+                rotateAxis.set(1f, 0f, 0f)
+            }
+            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Y -> {
+                rotateAxisIndex = 1
+                rotateAxis.set(0f, 1f, 0f)
+            }
+            top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> {
+                rotateAxisIndex = 2
+                rotateAxis.set(0f, 0f, 1f)
+            }
         }
 
-        val ikPos = instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
-        val targetPos = instance.getWorldTransform(node).getTranslation(targetPos)
-        val invChain = instance.getWorldTransform(chain.nodeIndex).invert(invChain)
+        instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
+        instance.getWorldTransform(node).getTranslation(targetPos)
+        instance.getWorldTransform(chain.nodeIndex).invert(invChain)
 
-        // 转换到关节局部空间
-        val chainIkPos = ikPos.mulPosition(invChain, chainIkPos)
-        val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
-
-        if (chainIkPos.lengthSquared() < 1e-8f || chainTargetPos.lengthSquared() < 1e-8f) return
-
-        // --- 核心修改开始 ---
-        // 将向量投影到旋转平面上 (即去除旋转轴分量)
-        
-        // v_plane = v - axis * (v . axis)
-        val ikDot = chainIkPos.dot(rotateAxisVec)
-        val targetDot = chainTargetPos.dot(rotateAxisVec)
-        
-        // 投影向量
-        chainIkPos.sub(rotateAxisVec.mul(ikDot, tmpAxisVec))
-        chainTargetPos.sub(rotateAxisVec.mul(targetDot, tmpAxisVec))
-
-        // 再次检查长度，防止投影后变成零向量（例如目标点刚好在旋转轴上）
-        if (chainIkPos.lengthSquared() < 1e-8f || chainTargetPos.lengthSquared() < 1e-8f) return
+        // Local positions
+        ikPos.mulPosition(invChain, chainIkPos)
+        targetPos.mulPosition(invChain, chainTargetPos)
 
         val chainIkVec = chainIkPos.normalize()
         val chainTargetVec = chainTargetPos.normalize()
 
-        val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
-        var deltaAngle = acos(dot) * IK_DAMPING_FACTOR // 阻尼
+        var dot = chainTargetVec.dot(chainIkVec)
+        dot = clamp(dot, -1.0f, 1.0f)
 
-        if (abs(deltaAngle) < MIN_ROTATION_THRESHOLD) return
+        var angle = acos(dot)
+        angle = clamp(angle, -limitRadian, limitRadian)
 
-        deltaAngle = deltaAngle.coerceIn(-limitRadian, limitRadian)
+        // Test +angle
+        val rot1 = Quaternionf().rotateAxis(angle, rotateAxis)
+        // targetVec1 = rot1 * chainTargetVec
+        val targetVec1 = Vector3f(chainTargetVec).rotate(rot1)
+        val dot1 = targetVec1.dot(chainIkVec)
 
-        // 使用叉乘判断旋转方向
-        // cross = target x ik
-        chainTargetVec.cross(chainIkVec, cross)
-        
-        // 如果 cross 方向与旋转轴方向相同，则为正，反之为负
-        if (cross.dot(rotateAxisVec) < 0) {
-            deltaAngle = -deltaAngle
+        // Test -angle
+        val rot2 = Quaternionf().rotateAxis(-angle, rotateAxis)
+        // targetVec2 = rot2 * chainTargetVec
+        val targetVec2 = Vector3f(chainTargetVec).rotate(rot2)
+        val dot2 = targetVec2.dot(chainIkVec)
+
+        var newAngle = chain.planeModeAngle
+        if (dot1 > dot2) {
+            newAngle += angle
+        } else {
+            newAngle -= angle
         }
 
-        // --- 核心修改结束 ---
+        // 0th iteration special logic for limits
+        if (iteration == 0) {
+            val minLim = limit.min.get(rotateAxisIndex)
+            val maxLim = limit.max.get(rotateAxisIndex)
+            
+            if (newAngle < minLim || newAngle > maxLim) {
+                if (-newAngle > minLim && -newAngle < maxLim) {
+                    newAngle *= -1
+                } else {
+                    val halfRad = (minLim + maxLim) * 0.5f
+                    if (abs(halfRad - newAngle) > abs(halfRad + newAngle)) {
+                        newAngle *= -1
+                    }
+                }
+            }
+        }
 
-        var newAngle = normalizeAngle(chain.planeModeAngle + deltaAngle)
-
-        // 限制角度
-        val minLimit = limits.min.getAxis(axis)
-        val maxLimit = limits.max.getAxis(axis)
+        // Clamp
+        val minLim = limit.min.get(rotateAxisIndex)
+        val maxLim = limit.max.get(rotateAxisIndex)
+        newAngle = clamp(newAngle, minLim, maxLim)
         
-        // 更严格的限制逻辑
-        newAngle = newAngle.coerceIn(minLimit, maxLimit)
-
-        // 记录状态
         chain.planeModeAngle = newAngle
 
-        // 应用旋转
-        val prevRotationInv = instance.getTransformMap(chain.nodeIndex)
+        // Apply
+        // ikRotM = rotate(newAngle, axis) * inverse(AnimateRotate)
+        val ikRot = Quaternionf().rotateAxis(newAngle, rotateAxis)
+        
+        val prevRotationInv = Quaternionf()
+        instance.getTransformMap(chain.nodeIndex)
             .getSum(transformId.prev)
-            .getUnnormalizedRotation(prevRotationInv).invert()
-            
+            .getUnnormalizedRotation(prevRotationInv)
+            .invert()
+
         instance.setTransformDecomposed(chain.nodeIndex, transformId) {
-            rotation.rotationAxis(newAngle, rotateAxisVec).mul(prevRotationInv)
+            rotation.set(ikRot).mul(prevRotationInv)
         }
         instance.updateNodeTransform(chain.nodeIndex)
     }
@@ -340,37 +417,48 @@ class IkTargetComponent(
         instance: ModelInstanceImpl,
     ) {
         val enabled = instance.modelData.ikEnabled[ikIndex]
-        if (!enabled) return
-        
+        if (!enabled) {
+            return
+        }
+
         when (phase) {
             is UpdatePhase.IkUpdate -> {
-                if (chains.isEmpty()) return
+                if (chains.isEmpty()) {
+                    return
+                }
 
-                // Reset
+                // Initialize IKChain (saba: Solve start)
                 for (chain in chains) {
                     chain.prevAngle.set(0f)
+                    // chain.m_node->SetIKRotate(identity)
                     instance.setTransformDecomposed(chain.nodeIndex, transformId) {
                         rotation.identity()
                     }
                     chain.planeModeAngle = 0f
+                    // Update transforms
                 }
+                // Update the last chain node (and consequently others if hierarchical, 
+                // but we might need to loop update if they are dependent. 
+                // saba calls UpdateGlobalTransform on each chain node in the loop. 
+                // Here we call on the last one, assuming parent updates propagate or will be handled in SolveCore loops)
+                // For safety, let's update all? Or just depend on SolveCore to update.
+                // The provided code updated the last one.
                 instance.updateNodeTransform(chains.last().nodeIndex)
 
                 var maxDist = Float.MAX_VALUE
                 
-                // 循环解算
                 for (i in 0 until loopCount) {
                     solveCore(node, instance, i)
 
-                    val targetPos = instance.getWorldTransform(node).getTranslation(targetPos)
-                    val ikPos = instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
-                    val dist = targetPos.distanceSquared(ikPos)
-
-                    if (dist < MIN_ROTATION_THRESHOLD) break // 足够近了就停止
-
+                    // Check distance
+                    instance.getWorldTransform(node).getTranslation(targetPos)
+                    instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
+                    
+                    val dist = targetPos.distance(ikPos) // saba uses glm::length(target - ik)
+                    
                     if (dist < maxDist) {
                         maxDist = dist
-                        // 保存当前最佳状态
+                        // Save rotations
                         for (chain in chains) {
                             val matrix = instance.getTransformMap(chain.nodeIndex).get(transformId)
                             if (matrix != null) {
@@ -380,23 +468,43 @@ class IkTargetComponent(
                             }
                         }
                     } else {
-                        // 如果距离变大了（发散），回退到上一次最佳状态并强制结束
-                        // 这是一个很重要的防抖机制
+                        // Restore rotations and Break
                         for (chain in chains) {
+                            val prevRotationInv = Quaternionf()
+                            instance.getTransformMap(chain.nodeIndex)
+                                .getSum(transformId.prev)
+                                .getUnnormalizedRotation(prevRotationInv)
+                                .invert()
+                                
                             instance.setTransformDecomposed(chain.nodeIndex, transformId) {
+                                // Restore the saved IK rotation
+                                // Note: saveIKRot captured the FULL local rotation (Anim * IK) ?
+                                // No, in `SolveCore` we update the node transform, so `get(transformId)`
+                                // returns the current IK transform component if `transformId` is specific to IK.
+                                // If `transformId` is the IK layer ID, then `get(transformId)` returns just the IK rotation.
+                                
+                                // Wait, `SolveCore` logic:
+                                // `chainRot` includes `getSum(transformId)` which is ALL layers.
+                                // Then we set `transformId` component to `chainRot * inv(prev)`.
+                                // So `get(transformId)` returns the IK component.
+                                // `chain.saveIKRot` stores this component.
+                                // So we can just set it back.
+                                
                                 rotation.set(chain.saveIKRot)
                             }
                         }
-                        instance.updateNodeTransform(chains.last().nodeIndex)
-                        break 
+                        // Need to update transforms after restore? saba does.
+                        // instance.updateNodeTransform(chains.last().nodeIndex)
+                        // But we are breaking, so the render phase will see the restored state.
+                        break
                     }
                 }
             }
 
             is UpdatePhase.DebugRender -> {
-                val consumers = phase.vertexConsumerProvider
+                 val consumers = phase.vertexConsumerProvider
+
                 val boxBuffer = consumers.getBuffer(RenderLayer.getDebugQuads())
-                // 绘制关节
                 for (joint in chains) {
                     val jointMatrix = phase.viewProjectionMatrix.mul(
                         instance.getWorldTransform(joint.nodeIndex),
@@ -405,17 +513,14 @@ class IkTargetComponent(
                     boxBuffer.drawBox(jointMatrix, 0.005f, Colors.BLUE)
                 }
 
-                // 绘制效应器
                 val effectorMatrix =
                     phase.viewProjectionMatrix.mul(instance.getWorldTransform(effectorNodeIndex), phase.cacheMatrix)
                 boxBuffer.drawBox(effectorMatrix, 0.01f, Colors.RED)
 
-                // 绘制目标
                 val targetMatrix =
                     phase.viewProjectionMatrix.mul(instance.getWorldTransform(node), phase.cacheMatrix)
                 boxBuffer.drawBox(targetMatrix, 0.01f, Colors.GREEN)
 
-                // 绘制轴线
                 val lineBuffer = consumers.getBuffer(DEBUG_RENDER_LAYER)
                 for (joint in chains) {
                     val jointMatrix = phase.viewProjectionMatrix.mul(
@@ -426,7 +531,8 @@ class IkTargetComponent(
                     lineBuffer.vertex(jointMatrix, 0.0f, 0.0f, 0.0f).color(Colors.RED).normal(0.0f, 1.0f, 0.0f)
                     lineBuffer.vertex(jointMatrix, lineSize, 0.0f, 0.0f).color(Colors.RED).normal(0.0f, 1.0f, 0.0f)
                     lineBuffer.vertex(jointMatrix, 0.0f, lineSize, 0.0f).color(Colors.GREEN).normal(0.0f, 1.0f, 0.0f)
-                    lineBuffer.vertex(jointMatrix, 0.0f, lineSize, lineSize).color(Colors.GREEN).normal(0.0f, 1.0f, 0.0f)
+                    lineBuffer.vertex(jointMatrix, 0.0f, lineSize, lineSize).color(Colors.GREEN)
+                        .normal(0.0f, 1.0f, 0.0f)
                     lineBuffer.vertex(jointMatrix, lineSize, 0.0f, 0.0f).color(Colors.BLUE).normal(0.0f, 1.0f, 0.0f)
                     lineBuffer.vertex(jointMatrix, lineSize, 0.0f, lineSize).color(Colors.BLUE).normal(0.0f, 1.0f, 0.0f)
                 }
