@@ -135,10 +135,18 @@ class IkTargetComponent(
         top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> z()
     }
 
-    private fun Vector3f.coerceIn(min: Vector3fc, max: Vector3fc): Vector3f = set(
+    // 重命名一下防止歧义
+    private fun Vector3f.coerceInVectors(min: Vector3fc, max: Vector3fc): Vector3f = set(
         x.coerceIn(min.x(), max.x()),
         y.coerceIn(min.y(), max.y()),
         z.coerceIn(min.z(), max.z()),
+    )
+
+    // 给标量用的 clamp，改个名字，编译器就不会搞混啦！
+    private fun Vector3f.clampScalar(min: Float, max: Float): Vector3f = set(
+        x.coerceIn(min, max),
+        y.coerceIn(min, max),
+        z.coerceIn(min, max),
     )
     
     // 辅助函数：把世界空间的向量转换到节点的局部空间（仅旋转）
@@ -217,9 +225,12 @@ class IkTargetComponent(
                 val rotXYZ = decompose(chainRotM, chain.prevAngle, rotXYZ)
                 
                 // 4. 角度限制逻辑优化：平滑限制
-                val clampXYZ = rotXYZ.coerceIn(limit.min, limit.max)
+                // 修复了这里的方法调用：
+                // coerceIn -> coerceInVectors
+                // coerceIn -> clampScalar
+                val clampXYZ = rotXYZ.coerceInVectors(limit.min, limit.max)
                     .sub(chain.prevAngle)
-                    .coerceIn(-limitRadian, limitRadian)
+                    .clampScalar(-limitRadian, limitRadian)
                     .add(chain.prevAngle)
 
                 chainRotM.rotationXYZ(clampXYZ.x, clampXYZ.y, clampXYZ.z)
@@ -247,10 +258,12 @@ class IkTargetComponent(
         limits: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits,
         axis: top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis,
     ) {
-        val rotateAxisVec = when (axis.axis) {
+        // 修复了这里的 when 语句，直接判断 axis 枚举
+        val rotateAxisVec = when (axis) {
             top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.X -> Vector3f(1f, 0f, 0f)
             top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Y -> Vector3f(0f, 1f, 0f)
             top.fifthlight.blazerod.model.IkTarget.IkJoint.Limits.Axis.Z -> Vector3f(0f, 0f, 1f)
+            else -> Vector3f(1f, 0f, 0f) // Fallback for safety
         }
 
         val ikPos = instance.getWorldTransform(effectorNodeIndex).getTranslation(ikPos)
@@ -265,7 +278,6 @@ class IkTargetComponent(
 
         // --- 核心修改开始 ---
         // 将向量投影到旋转平面上 (即去除旋转轴分量)
-        // 这样可以精确计算在平面上的旋转角度，避免因向量有轴向分量导致的计算偏差
         
         // v_plane = v - axis * (v . axis)
         val ikDot = chainIkPos.dot(rotateAxisVec)
@@ -305,7 +317,7 @@ class IkTargetComponent(
         val minLimit = limits.min.getAxis(axis)
         val maxLimit = limits.max.getAxis(axis)
         
-        // 更严格的限制逻辑：如果完全超出范围，直接 clamp，而不是试探翻转
+        // 更严格的限制逻辑
         newAngle = newAngle.coerceIn(minLimit, maxLimit)
 
         // 记录状态
