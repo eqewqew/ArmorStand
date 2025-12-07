@@ -184,8 +184,8 @@ class IkTargetComponent(
 
             val chainIkPos = ikPos.mulPosition(invChain, chainIkPos)
             val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
-            val chainIkPos = ikPos.mulPosition(invChain, Vector3())
-            val chainTargetPos = targetPos.mulPosition(invChain, Vector3())
+            val chainIkPos = ikPos.mulPosition(invChain, Vector3f())
+            val chainTargetPos = targetPos.mulPosition(invChain, Vector3f())
             // Unnormalized vector seems never used then, so directly overwrite them
             val chainIkVec = if (chainIkPos.lengthSquared() > 1e-8f) {
             chainIkPos.normalize()
@@ -207,7 +207,7 @@ class IkTargetComponent(
             }
             angle = angle.coerceIn(-limitRadian, limitRadian)
 
-            val crossRaw = chainTargetVec.cross(chainIkVec, Vector3())
+            val crossRaw = chainTargetVec.cross(chainIkVec, Vector3f())
             val cross = if (crossRaw.lengthSquared() > 1e-8f) {
             crossRaw.normalize()
             } else {
@@ -265,8 +265,6 @@ class IkTargetComponent(
         val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
         // Unnormalized vector seems never used then, so directly overwrite them
-        val chainIkVec = chainIkPos.normalize()
-        val chainTargetVec = chainTargetPos.normalize()
 
         val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
 
@@ -366,7 +364,7 @@ class IkTargetComponent(
                             }
                 instance.updateNodeTransform(chains.last().nodeIndex)
             }
-
+        }
             is UpdatePhase.DebugRender -> {
                 val consumers = phase.vertexConsumerProvider
 
