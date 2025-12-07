@@ -186,9 +186,18 @@ class IkTargetComponent(
             val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
             // Unnormalized vector seems never used then, so directly overwrite them
-            val chainIkVec = chainIkPos.normalize()
-            val chainTargetVec = chainTargetPos.normalize()
-
+            val chainIkVec = if(chainIkPos.lengthSquared()>1e-8f){
+        chainIkPos.normalize()
+            }
+        else{
+            continue
+        }
+        val chainTarget = if(chainTarget.lengthSqured()>1e-8f){
+        chainTargetPos.normalize()
+        }
+        else{
+            continue
+        }
             val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
 
             var angle = acos(dot)
@@ -197,7 +206,12 @@ class IkTargetComponent(
                 continue
             }
             angle = angle.coerceIn(-limitRadian, limitRadian)
-            val cross = chainTargetVec.cross(chainIkVec, cross).normalize()
+            val cross = chainTargetVec.cross(chainIkVec, cross)
+            val cross = if (crossRaw.lengthSquared() > 1e-8f) {
+            crossRaw.normalize()
+            } else {
+             continue 
+            }
             val rot = rot.rotationAxis(angle, cross)
 
             val chainRot = instance.getTransformMap(chain.nodeIndex)
@@ -250,9 +264,18 @@ class IkTargetComponent(
         val chainTargetPos = targetPos.mulPosition(invChain, chainTargetPos)
 
         // Unnormalized vector seems never used then, so directly overwrite them
-        val chainIkVec = chainIkPos.normalize()
-        val chainTargetVec = chainTargetPos.normalize()
-
+       val chainIkVec = if(chainIkPos.lengthSquared()>1e-8f){
+        chainIkPos.normalize()
+       }
+        else{
+            continue
+        }
+        val chainTarget = if(chainTarget.lengthSqured()>1e-8f){
+         chainTargetPos.normalize()
+        }
+        else{
+            continue
+        }
         val dot = chainTargetVec.dot(chainIkVec).coerceIn(-1f, 1f)
 
         val angle = acos(dot).coerceIn(-limitRadian, limitRadian)
@@ -300,10 +323,11 @@ class IkTargetComponent(
     }
 
     override fun update(
+       
         phase: UpdatePhase,
         node: RenderNodeImpl,
         instance: ModelInstanceImpl,
-    ) {
+    ) { val epsilon=1e-6f
         val enabled = instance.modelData.ikEnabled[ikIndex]
         if (!enabled) {
             return
@@ -331,26 +355,26 @@ class IkTargetComponent(
                     // We use distanceSquared() here, unlike original code
                     val dist = targetPos.distanceSquared(ikPos)
 
-                    if (dist < maxDist) {
+                    if (dist < maxDist-epsilon) {
                         maxDist = dist
                         for (chain in chains) {
                             val matrix = instance.getTransformMap(chain.nodeIndex).get(transformId)
                             if (matrix != null) {
                                 matrix.getRotation(chain.saveIKRot)
-                            } else {
-                                chain.saveIKRot.identity()
-                            }
+                            } 
+                            else {
+                chain.saveIKRot.identity()
+            }
                         }
-                    } else {
-                        for (chain in chains) {
-                            instance.setTransformDecomposed(chain.nodeIndex, transformId) {
-                                rotation.set(chain.saveIKRot)
-                            }
-                        }
-                        instance.updateNodeTransform(chains.last().nodeIndex)
-                        break
-                    }
+                    } 
                 }
+                for (chain in chains) {
+               instance.setTransformDecomposed(chain.nodeIndex, transformId) {
+               rotation.set(chain.saveIKRot)
+              }
+           }
+                instance.updateNodeTransform(chains.last().nodeIndex)
+
             }
 
             is UpdatePhase.DebugRender -> {
