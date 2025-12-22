@@ -9,8 +9,8 @@ sealed class UpdatePhase(
     val type: Type,
 ) {
     enum class Type {
-        IK_UPDATE,
         INFLUENCE_TRANSFORM_UPDATE,
+        IK_UPDATE,
         GLOBAL_TRANSFORM_PROPAGATION,
         RENDER_DATA_UPDATE,
         CAMERA_UPDATE,
