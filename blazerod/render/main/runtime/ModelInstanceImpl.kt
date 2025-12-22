@@ -43,8 +43,57 @@ class ModelInstanceImpl(
     class ModelData(scene: RenderSceneImpl) : AutoCloseable {
         var undirtyNodeCount = 0
 
+        // (✨修复重点) 这里注入了父子关系逻辑！
+        // 告诉 TransformMap 真正的骨骼层级，防止腿部扭曲！
         val transformMaps = scene.nodes.mapToArray { node ->
-            TransformMap(node.absoluteTransform)
+            TransformMap(node.absoluteTransform) { id ->
+                // 1. 定义一个安全的查找函数，找不到也不报错
+                fun find(name: String): TransformId? = TransformId.entries.find { it.name == name }
+
+                // 2. 根据名字匹配父节点 (标准骨骼结构)
+                val parent = when (id.name) {
+                    // --- 躯干 (Torso) ---
+                    "HEAD" -> find("NECK") ?: find("UPPER_CHEST") ?: find("BODY")
+                    "NECK" -> find("UPPER_CHEST") ?: find("CHEST") ?: find("BODY")
+                    "UPPER_CHEST" -> find("CHEST") ?: find("SPINE")
+                    "CHEST" -> find("SPINE") ?: find("HIPS") ?: find("BODY")
+                    "SPINE" -> find("HIPS") ?: find("BODY")
+                    "HIPS" -> find("FIRST") // 屁股通常连着根节点
+                    "BODY" -> find("FIRST") // 或者 BODY 连着 FIRST
+
+                    // --- 左腿 (Left Leg) [防扭曲关键点！] ---
+                    "LEFT_TOES" -> find("LEFT_FOOT")
+                    "LEFT_FOOT" -> find("LEFT_LOWER_LEG") ?: find("LEFT_CALF") ?: find("LEG_L_LOWER")
+                    "LEFT_LOWER_LEG", "LEFT_CALF", "LEG_L_LOWER" -> 
+                        find("LEFT_UPPER_LEG") ?: find("LEFT_THIGH") ?: find("LEG_L_UPPER")
+                    "LEFT_UPPER_LEG", "LEFT_THIGH", "LEG_L_UPPER" -> 
+                        find("HIPS") ?: find("BODY") // <--- 确保大腿连着屁股！
+
+                    // --- 右腿 (Right Leg) ---
+                    "RIGHT_TOES" -> find("RIGHT_FOOT")
+                    "RIGHT_FOOT" -> find("RIGHT_LOWER_LEG") ?: find("RIGHT_CALF") ?: find("LEG_R_LOWER")
+                    "RIGHT_LOWER_LEG", "RIGHT_CALF", "LEG_R_LOWER" -> 
+                        find("RIGHT_UPPER_LEG") ?: find("RIGHT_THIGH") ?: find("LEG_R_UPPER")
+                    "RIGHT_UPPER_LEG", "RIGHT_THIGH", "LEG_R_UPPER" -> 
+                        find("HIPS") ?: find("BODY")
+
+                    // --- 左臂 (Left Arm) ---
+                    "LEFT_HAND" -> find("LEFT_LOWER_ARM")
+                    "LEFT_LOWER_ARM" -> find("LEFT_UPPER_ARM")
+                    "LEFT_UPPER_ARM" -> find("UPPER_CHEST") ?: find("CHEST")
+
+                    // --- 右臂 (Right Arm) ---
+                    "RIGHT_HAND" -> find("RIGHT_LOWER_ARM")
+                    "RIGHT_LOWER_ARM" -> find("RIGHT_UPPER_ARM")
+                    "RIGHT_UPPER_ARM" -> find("UPPER_CHEST") ?: find("CHEST")
+
+                    // --- 兜底 ---
+                    else -> null
+                }
+
+                // 3. 如果找到了父节点就返回，找不到就只能连到 FIRST 防止断链
+                parent ?: if (id.name == "FIRST") null else TransformId.FIRST
+            }
         }
 
         val transformDirty = Array(scene.nodes.size) { true }
@@ -105,6 +154,8 @@ class ModelInstanceImpl(
     override fun setTransformMatrix(nodeIndex: Int, transformId: TransformId, matrix: Matrix4f) {
         markNodeTransformDirty(scene.nodes[nodeIndex])
         val transform = modelData.transformMaps[nodeIndex]
+        // (💡小贴士) 如果是 IK 算出的世界坐标，建议用 transform.setGlobalMatrix(transformId, matrix)
+        // 不过这里是通用接口，保持 setMatrix 也可以，只要外部传入的是局部坐标就行。
         transform.setMatrix(transformId, matrix)
     }
 
