@@ -108,8 +108,13 @@ class TransformMap(first: NodeTransformView?) {
     fun getSum(id: TransformId): Matrix4fc {
         // 如果 id 本身是脏的，或者它的任何一个祖先是脏的，我们需要重新计算。
         // calculateIntermediateMatrices 会自动处理从最近非脏点开始计算的逻辑。
-          return  calculateIntermediateMatrices(id)
+           return if (dirtyTransforms.contains(id)) {
+        calculateIntermediateMatrices(id)
+    } else {
+        intermediateMatrices[id]
+            ?: calculateIntermediateMatrices(id)
     }
+  }
 
 
     // 标记当前 ID 及其后续所有 ID 为脏
