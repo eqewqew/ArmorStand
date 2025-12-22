@@ -1,5 +1,4 @@
 package top.fifthlight.blazerod.runtime.node
-
 import org.joml.Matrix4f
 import org.joml.Matrix4fc
 import org.joml.Quaternionf
