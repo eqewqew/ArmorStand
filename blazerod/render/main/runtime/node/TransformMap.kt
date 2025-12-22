@@ -108,16 +108,9 @@ class TransformMap(first: NodeTransformView?) {
     fun getSum(id: TransformId): Matrix4fc {
         // 如果 id 本身是脏的，或者它的任何一个祖先是脏的，我们需要重新计算。
         // calculateIntermediateMatrices 会自动处理从最近非脏点开始计算的逻辑。
-        return if (dirtyTransforms.contains(id)) {
-            calculateIntermediateMatrices(id)
-        } else {
-            // 如果 id 不脏，直接返回上一级存在的缓存矩阵。
-            for (i in (0..id.ordinal).reversed()) {
-                intermediateMatrices[TransformId.entries[i]]?.let { return it }
-            }
-            throw IllegalStateException("There must be a intermediate matrix for ${TransformId.entries.first()}.")
-        }
+          return  calculateIntermediateMatrices(id)
     }
+
 
     // 标记当前 ID 及其后续所有 ID 为脏
     private fun markDirty(id: TransformId) {
