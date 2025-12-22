@@ -110,7 +110,7 @@ class TransformMap(first: NodeTransformView?) {
         // calculateIntermediateMatrices 会自动处理从最近非脏点开始计算的逻辑。
           return  calculateIntermediateMatrices(id)
     }
-}
+
 
     // 标记当前 ID 及其后续所有 ID 为脏
     private fun markDirty(id: TransformId) {
